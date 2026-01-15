@@ -27,7 +27,7 @@ The game now has complete poker logic with:
 - [x] Implement poker hand evaluation algorithm
 - [x] Add betting controls (fold, call, raise buttons)
 - [x] Create PlayerArea component for chip counts
-- [ ] Add game phase management (preflop → flop → turn → river)
+- [x] Add game phase management (preflop → flop → turn → river)
 - [ ] Implement basic AI decision making
 - [ ] Add win/lose detection
 

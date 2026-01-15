@@ -54,9 +54,6 @@ function App() {
     const humanHand = newDeck.dealCards(2);
     const aiHand = newDeck.dealCards(2);
 
-    // Deal community cards (but only show flop initially in real poker)
-    const community = newDeck.dealCards(5);
-
     // Reset player states for new hand
     const resetPlayers = players.map(player => ({
       ...player,
@@ -80,12 +77,67 @@ function App() {
 
     setDeck(newDeck);
     setPlayers(playersWithBlinds);
-    setCommunityCards(community);
+    setCommunityCards([]); // Start with no community cards visible
     setPot(SMALL_BLIND + BIG_BLIND);
     setCurrentBet(BIG_BLIND);
     setCurrentPlayerIndex(0); // Start with human player (after blinds)
     setGamePhase('preflop');
     setRaiseAmount('');
+  };
+
+  // Function to transition to the next game phase
+  const advanceGamePhase = () => {
+    const activePlayers = players.filter(p => !p.hasFolded);
+
+    if (activePlayers.length <= 1) {
+      setGamePhase('showdown');
+      setCurrentPlayerIndex(-1);
+      return;
+    }
+
+    let newCommunityCards = [...communityCards];
+    let newPhase: typeof gamePhase;
+
+    switch (gamePhase) {
+      case 'preflop':
+        // Deal flop (3 community cards)
+        newCommunityCards = deck.dealCards(3);
+        newPhase = 'flop';
+        break;
+      case 'flop':
+        // Deal turn (1 more community card)
+        newCommunityCards = [...communityCards, ...deck.dealCards(1)];
+        newPhase = 'turn';
+        break;
+      case 'turn':
+        // Deal river (1 more community card)
+        newCommunityCards = [...communityCards, ...deck.dealCards(1)];
+        newPhase = 'river';
+        break;
+      case 'river':
+        // Move to showdown
+        newPhase = 'showdown';
+        setCurrentPlayerIndex(-1);
+        break;
+      default:
+        return; // Don't advance from other phases
+    }
+
+    setCommunityCards(newCommunityCards);
+    setGamePhase(newPhase);
+    setDeck(deck); // Update deck state after dealing cards
+
+    // Reset current bets for new betting round
+    const resetBetPlayers = players.map(player => ({
+      ...player,
+      currentBet: 0,
+    }));
+    setPlayers(resetBetPlayers);
+    setCurrentBet(0);
+
+    // Find first active player for new betting round
+    const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
+    setCurrentPlayerIndex(firstActivePlayerIndex);
   };
 
   useEffect(() => {
@@ -143,18 +195,37 @@ function App() {
     setPot(newPot);
     setCurrentBet(newCurrentBet);
 
-    // Move to next player (simplified - in real poker this would be more complex)
+    // Check if betting round is complete and advance phase if needed
     const activePlayers = newPlayers.filter(p => !p.hasFolded);
-    if (activePlayers.length > 1) {
-      let nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-      while (newPlayers[nextPlayerIndex].hasFolded) {
-        nextPlayerIndex = (nextPlayerIndex + 1) % players.length;
-      }
-      setCurrentPlayerIndex(nextPlayerIndex);
-    } else {
+    if (activePlayers.length <= 1) {
       // Game should end if only one player remains
       setGamePhase('showdown');
       setCurrentPlayerIndex(-1);
+    } else {
+      // For simplicity in 2-player game: after human acts, AI automatically calls/checks
+      // In a real game, this would be more complex with proper betting rounds
+      const aiPlayerIndex = newPlayers.findIndex(p => !p.isHuman && !p.hasFolded);
+      if (aiPlayerIndex !== -1) {
+        const aiPlayer = newPlayers[aiPlayerIndex];
+        const aiCallAmount = Math.max(0, newCurrentBet - aiPlayer.currentBet);
+
+        // Simple AI: always call
+        if (aiPlayer.chips >= aiCallAmount) {
+          newPlayers[aiPlayerIndex] = {
+            ...aiPlayer,
+            chips: aiPlayer.chips - aiCallAmount,
+            currentBet: aiPlayer.currentBet + aiCallAmount,
+          };
+          newPot += aiCallAmount;
+          setPot(newPot);
+          setPlayers(newPlayers);
+        }
+      }
+
+      // Advance to next phase after both players have acted
+      setTimeout(() => {
+        advanceGamePhase();
+      }, 1000); // Small delay for better UX
     }
   };
 
@@ -170,9 +241,39 @@ function App() {
         <div className="community-cards">
           <h3>Community Cards</h3>
           <div className="cards-row">
-            {communityCards.map((card, index) => (
-              <Card key={`community-${index}`} card={card} />
-            ))}
+            {communityCards.map((card, index) => {
+              // Only show cards that should be visible in current phase
+              const shouldShowCard = (
+                (gamePhase === 'flop' && index < 3) ||
+                (gamePhase === 'turn' && index < 4) ||
+                (gamePhase === 'river' && index < 5) ||
+                gamePhase === 'showdown'
+              );
+
+              return (
+                <Card
+                  key={`community-${index}`}
+                  card={shouldShowCard ? card : null}
+                />
+              );
+            })}
+            {/* Show placeholder cards for unrevealed cards */}
+            {gamePhase === 'preflop' && (
+              <>
+                <Card card={null} />
+                <Card card={null} />
+                <Card card={null} />
+              </>
+            )}
+            {gamePhase === 'flop' && (
+              <>
+                <Card card={null} />
+                <Card card={null} />
+              </>
+            )}
+            {gamePhase === 'turn' && (
+              <Card card={null} />
+            )}
           </div>
         </div>
 
