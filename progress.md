@@ -37,11 +37,26 @@ The game now has complete poker logic with:
 Repository: [https://github.com/dwang19/texas-holdem-poker](https://github.com/dwang19/texas-holdem-poker)
 
 ### Git Workflow:
-```bash
+```powershell
+# Check current status
+& "C:\Program Files\Git\bin\git.exe" status
+
 # After making changes:
-git add .
-git commit -m "Descriptive commit message"
-git push origin master
+& "C:\Program Files\Git\bin\git.exe" add .
+
+# Commit with descriptive message (use HEREDOC format for multi-line)
+& "C:\Program Files\Git\bin\git.exe" commit -m "Your commit message here"
+
+# Push to GitHub
+& "C:\Program Files\Git\bin\git.exe" push origin master
 ```
+
+**Important Notes for AI Assistant:**
+- **Full Git Path Required**: Use `& "C:\Program Files\Git\bin\git.exe"` instead of just `git` due to PowerShell environment limitations
+- **Call Operator**: Always use `&` before the quoted git path
+- **Working Directory**: Commands must be run from the project root: `C:\Projects\Texas Holdem Poker`
+- **Commit Messages**: Use descriptive, multi-line commit messages explaining what was implemented
+- **Pre-commit Checks**: Always run `git status` first to see what files changed
+- **Error Handling**: If git commands fail, try the full path approach above
 
 **Note**: AI assistant can handle all git operations automatically - just describe the feature you want implemented!
