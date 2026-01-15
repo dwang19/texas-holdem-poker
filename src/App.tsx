@@ -1,3 +1,4 @@
+// Test change for GitHub push capability - added by AI assistant
 import React, { useState, useEffect } from 'react';
 import Card from './components/Card';
 import { Deck, createDeck } from './game/deck';
