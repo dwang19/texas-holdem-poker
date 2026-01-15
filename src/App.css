@@ -48,23 +48,14 @@
   display: flex;
   justify-content: space-around;
   gap: 30px;
-}
-
-.player-hand {
-  flex: 1;
-  min-width: 250px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 768px) {
   .players-section {
     flex-direction: column;
     align-items: center;
-  }
-
-  .player-hand {
-    min-width: auto;
-    width: 100%;
-    max-width: 300px;
+    gap: 20px;
   }
 }
 
@@ -199,11 +190,3 @@
   font-weight: bold;
 }
 
-.player-hand.folded {
-  opacity: 0.6;
-  filter: grayscale(50%);
-}
-
-.player-hand.folded h3 {
-  color: #ff6b6b;
-}

@@ -1,6 +1,7 @@
 // Test change for GitHub push capability - added by AI assistant
 import React, { useState, useEffect } from 'react';
 import Card from './components/Card';
+import PlayerArea from './components/PlayerArea';
 import { Deck, createDeck } from './game/deck';
 import { Card as CardType, Player, GameState } from './game/types';
 import './App.css';
@@ -175,22 +176,15 @@ function App() {
           </div>
         </div>
 
-        {/* Player Hands */}
+        {/* Player Areas */}
         <div className="players-section">
-          {players.map((player) => (
-            <div key={player.id} className={`player-hand ${player.hasFolded ? 'folded' : ''}`}>
-              <h3>{player.name} {player.hasFolded && '(FOLDED)'}</h3>
-              <p>Chips: ${player.chips} | Current Bet: ${player.currentBet}</p>
-              <div className="cards-row">
-                {player.cards.map((card, index) => (
-                  <Card
-                    key={`${player.id}-${index}`}
-                    card={card}
-                    hidden={(!player.isHuman && gamePhase !== 'showdown') || player.hasFolded}
-                  />
-                ))}
-              </div>
-            </div>
+          {players.map((player, index) => (
+            <PlayerArea
+              key={player.id}
+              player={player}
+              isCurrentPlayer={index === currentPlayerIndex}
+              gamePhase={gamePhase}
+            />
           ))}
         </div>
 
