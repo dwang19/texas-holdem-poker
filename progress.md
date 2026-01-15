@@ -29,19 +29,17 @@ The basic card dealing and display system is functional. You can:
 - [ ] Implement basic AI decision making
 - [ ] Add win/lose detection
 
-## Ready for GitHub Setup
-⚠️ **ACTION NEEDED**: Git and GitHub CLI need to be installed to complete version control setup.
+## Development Workflow
+✅ **Git & GitHub Setup Complete**
 
-### To Complete GitHub Setup:
-1. **Install Git**: Download from [git-scm.com](https://git-scm.com/)
-2. **Install GitHub CLI**: `winget install --id GitHub.cli` or download from [cli.github.com](https://cli.github.com/)
-3. **Create GitHub repository** and connect this project
-4. **Set up deployment** on Vercel/Netlify
+Repository: [https://github.com/dwang19/texas-holdem-poker](https://github.com/dwang19/texas-holdem-poker)
 
-Once git is available, run these commands:
+### Git Workflow:
 ```bash
-git init
+# After making changes:
 git add .
-git commit -m "Initial poker game setup with React + TypeScript"
-# Then connect to GitHub repo and push
+git commit -m "Descriptive commit message"
+git push origin master
 ```
+
+**Note**: AI assistant can handle all git operations automatically - just describe the feature you want implemented!
