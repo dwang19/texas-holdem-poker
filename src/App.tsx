@@ -4,6 +4,7 @@ import Card from './components/Card';
 import PlayerArea from './components/PlayerArea';
 import { Deck, createDeck } from './game/deck';
 import { Card as CardType, Player, GameState } from './game/types';
+import { getAIDecision, AIPersonality } from './game/ai';
 import './App.css';
 
 function App() {
@@ -43,6 +44,7 @@ function App() {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState<number>(0);
   const [gamePhase, setGamePhase] = useState<'waiting' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown'>('waiting');
   const [raiseAmount, setRaiseAmount] = useState<string>('');
+  const [aiPersonality, setAiPersonality] = useState<AIPersonality>('balanced');
 
   const dealNewHand = () => {
     const newDeck = createDeck();
@@ -202,24 +204,74 @@ function App() {
       setGamePhase('showdown');
       setCurrentPlayerIndex(-1);
     } else {
-      // For simplicity in 2-player game: after human acts, AI automatically calls/checks
-      // In a real game, this would be more complex with proper betting rounds
+      // AI makes strategic decision
       const aiPlayerIndex = newPlayers.findIndex(p => !p.isHuman && !p.hasFolded);
       if (aiPlayerIndex !== -1) {
         const aiPlayer = newPlayers[aiPlayerIndex];
-        const aiCallAmount = Math.max(0, newCurrentBet - aiPlayer.currentBet);
+        const activePlayersCount = newPlayers.filter(p => !p.hasFolded).length;
 
-        // Simple AI: always call
-        if (aiPlayer.chips >= aiCallAmount) {
-          newPlayers[aiPlayerIndex] = {
-            ...aiPlayer,
-            chips: aiPlayer.chips - aiCallAmount,
-            currentBet: aiPlayer.currentBet + aiCallAmount,
-          };
-          newPot += aiCallAmount;
-          setPot(newPot);
-          setPlayers(newPlayers);
+        // Get AI decision based on hand strength and game state
+        const aiDecision = getAIDecision(
+          aiPlayer,
+          communityCards,
+          newCurrentBet,
+          newPot,
+          gamePhase,
+          activePlayersCount,
+          aiPersonality
+        );
+
+        let aiBetAmount = 0;
+
+        switch (aiDecision.action) {
+          case 'fold':
+            newPlayers[aiPlayerIndex] = {
+              ...aiPlayer,
+              hasFolded: true,
+            };
+            break;
+
+          case 'call':
+            aiBetAmount = Math.max(0, newCurrentBet - aiPlayer.currentBet);
+            if (aiPlayer.chips >= aiBetAmount) {
+              newPlayers[aiPlayerIndex] = {
+                ...aiPlayer,
+                chips: aiPlayer.chips - aiBetAmount,
+                currentBet: aiPlayer.currentBet + aiBetAmount,
+              };
+              newPot += aiBetAmount;
+            }
+            break;
+
+          case 'raise':
+            const raiseAmount = aiDecision.amount || 0;
+            const totalRaiseAmount = newCurrentBet - aiPlayer.currentBet + raiseAmount;
+            if (aiPlayer.chips >= totalRaiseAmount) {
+              newPlayers[aiPlayerIndex] = {
+                ...aiPlayer,
+                chips: aiPlayer.chips - totalRaiseAmount,
+                currentBet: aiPlayer.currentBet + totalRaiseAmount,
+              };
+              newPot += totalRaiseAmount;
+              newCurrentBet = aiPlayer.currentBet + totalRaiseAmount;
+            } else {
+              // If can't raise the full amount, just call
+              aiBetAmount = Math.max(0, newCurrentBet - aiPlayer.currentBet);
+              if (aiPlayer.chips >= aiBetAmount) {
+                newPlayers[aiPlayerIndex] = {
+                  ...aiPlayer,
+                  chips: aiPlayer.chips - aiBetAmount,
+                  currentBet: aiPlayer.currentBet + aiBetAmount,
+                };
+                newPot += aiBetAmount;
+              }
+            }
+            break;
         }
+
+        setPot(newPot);
+        setCurrentBet(newCurrentBet);
+        setPlayers(newPlayers);
       }
 
       // Advance to next phase after both players have acted
@@ -296,6 +348,19 @@ function App() {
             <p>Current Bet: ${currentBet}</p>
             <p>Phase: {gamePhase}</p>
             <p>Current Player: {players[currentPlayerIndex]?.name || 'None'}</p>
+            <div className="ai-settings">
+              <label htmlFor="ai-personality">AI Personality: </label>
+              <select
+                id="ai-personality"
+                value={aiPersonality}
+                onChange={(e) => setAiPersonality(e.target.value as AIPersonality)}
+                className="ai-personality-select"
+              >
+                <option value="conservative">Conservative</option>
+                <option value="balanced">Balanced</option>
+                <option value="aggressive">Aggressive</option>
+              </select>
+            </div>
           </div>
 
           {/* Betting Controls - Only show when it's human player's turn */}

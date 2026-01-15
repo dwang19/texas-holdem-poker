@@ -190,3 +190,42 @@
   font-weight: bold;
 }
 
+/* AI Settings */
+.ai-settings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+.ai-settings label {
+  margin: 0;
+  color: white;
+}
+
+.ai-personality-select {
+  padding: 5px 10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.ai-personality-select:focus {
+  outline: none;
+  border-color: #ffa726;
+  box-shadow: 0 0 10px rgba(255, 167, 38, 0.5);
+}
+
+.ai-personality-select option {
+  background: #3282b8;
+  color: white;
+}
+
