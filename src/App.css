@@ -229,3 +229,50 @@
   color: white;
 }
 
+/* Winner Announcement */
+.winner-announcement {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4a 100%);
+  color: #2c3e50;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 8px 32px rgba(255, 215, 0, 0.3);
+  animation: winnerPulse 2s infinite;
+  margin: 10px 0;
+  border: 3px solid #fff;
+}
+
+.winner-announcement h3 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.winner-announcement p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+@keyframes winnerPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 32px rgba(255, 215, 0, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 12px 40px rgba(255, 215, 0, 0.5);
+  }
+}
+
+.deal-button:disabled {
+  background: linear-gradient(135deg, #666 0%, #999 100%);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.deal-button:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+

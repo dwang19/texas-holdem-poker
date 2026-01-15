@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import Card from './components/Card';
 import PlayerArea from './components/PlayerArea';
 import { Deck, createDeck } from './game/deck';
-import { Card as CardType, Player, GameState } from './game/types';
+import { Card as CardType, Player, GameState, PokerHand } from './game/types';
 import { getAIDecision, AIPersonality } from './game/ai';
+import { evaluateHand, compareHands } from './game/pokerLogic';
 import './App.css';
 
 function App() {
@@ -45,6 +46,56 @@ function App() {
   const [gamePhase, setGamePhase] = useState<'waiting' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown'>('waiting');
   const [raiseAmount, setRaiseAmount] = useState<string>('');
   const [aiPersonality, setAiPersonality] = useState<AIPersonality>('balanced');
+  const [winner, setWinner] = useState<Player | null>(null);
+  const [handComplete, setHandComplete] = useState<boolean>(false);
+
+  const determineWinner = () => {
+    const activePlayers = players.filter(p => !p.hasFolded);
+
+    if (activePlayers.length === 1) {
+      // Only one player left, they win by default
+      const winningPlayer = activePlayers[0];
+      setPlayers(prevPlayers =>
+        prevPlayers.map(player =>
+          player.id === winningPlayer.id
+            ? { ...player, chips: player.chips + pot }
+            : player
+        )
+      );
+      setWinner(winningPlayer);
+      setHandComplete(true);
+      return;
+    }
+
+    // Multiple players still active, evaluate hands
+    const playerHands: { player: Player; hand: PokerHand }[] = activePlayers.map(player => ({
+      player,
+      hand: evaluateHand(player.cards, communityCards)
+    }));
+
+    // Find the best hand
+    let bestHandIndex = 0;
+    for (let i = 1; i < playerHands.length; i++) {
+      const comparison = compareHands(playerHands[i].hand, playerHands[bestHandIndex].hand);
+      if (comparison > 0) {
+        bestHandIndex = i;
+      }
+    }
+
+    const winningPlayer = playerHands[bestHandIndex].player;
+
+    // Award the pot to the winner
+    setPlayers(prevPlayers =>
+      prevPlayers.map(player =>
+        player.id === winningPlayer.id
+          ? { ...player, chips: player.chips + pot }
+          : player
+      )
+    );
+
+    setWinner(winningPlayer);
+    setHandComplete(true);
+  };
 
   const dealNewHand = () => {
     const newDeck = createDeck();
@@ -85,6 +136,8 @@ function App() {
     setCurrentPlayerIndex(0); // Start with human player (after blinds)
     setGamePhase('preflop');
     setRaiseAmount('');
+    setWinner(null);
+    setHandComplete(false);
   };
 
   // Function to transition to the next game phase
@@ -120,6 +173,10 @@ function App() {
         // Move to showdown
         newPhase = 'showdown';
         setCurrentPlayerIndex(-1);
+        // Determine winner after a short delay to allow UI to update
+        setTimeout(() => {
+          determineWinner();
+        }, 500);
         break;
       default:
         return; // Don't advance from other phases
@@ -203,6 +260,10 @@ function App() {
       // Game should end if only one player remains
       setGamePhase('showdown');
       setCurrentPlayerIndex(-1);
+      // Determine winner immediately since no more betting needed
+      setTimeout(() => {
+        determineWinner();
+      }, 500);
     } else {
       // AI makes strategic decision
       const aiPlayerIndex = newPlayers.findIndex(p => !p.isHuman && !p.hasFolded);
@@ -348,6 +409,12 @@ function App() {
             <p>Current Bet: ${currentBet}</p>
             <p>Phase: {gamePhase}</p>
             <p>Current Player: {players[currentPlayerIndex]?.name || 'None'}</p>
+            {winner && handComplete && (
+              <div className="winner-announcement">
+                <h3>🏆 {winner.name} Wins! 🏆</h3>
+                <p>Pot awarded: ${pot}</p>
+              </div>
+            )}
             <div className="ai-settings">
               <label htmlFor="ai-personality">AI Personality: </label>
               <select
@@ -388,8 +455,12 @@ function App() {
             </div>
           )}
 
-          <button onClick={dealNewHand} className="deal-button">
-            Deal New Hand
+          <button
+            onClick={dealNewHand}
+            className="deal-button"
+            disabled={!handComplete && gamePhase !== 'waiting'}
+          >
+            {handComplete ? 'Deal New Hand' : 'Hand in Progress'}
           </button>
           <p>Cards remaining in deck: {deck.getRemainingCards()}</p>
         </div>
