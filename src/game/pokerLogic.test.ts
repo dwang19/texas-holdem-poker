@@ -1,0 +1,158 @@
+import { evaluateHand, compareHands } from './pokerLogic';
+import { Card } from './types';
+
+// Helper function to create test cards
+const createCard = (rank: number, suit: Card['suit']): Card => ({
+  rank,
+  suit,
+  displayRank: rank === 14 ? 'A' : rank === 13 ? 'K' : rank === 12 ? 'Q' : rank === 11 ? 'J' : rank.toString()
+});
+
+describe('Poker Hand Evaluation', () => {
+  test('Royal Flush', () => {
+    const holeCards = [
+      createCard(14, 'hearts'), // Ace
+      createCard(13, 'hearts')  // King
+    ];
+    const communityCards = [
+      createCard(12, 'hearts'), // Queen
+      createCard(11, 'hearts'), // Jack
+      createCard(10, 'hearts'), // 10
+      createCard(9, 'clubs'),   // 9 (different suit)
+      createCard(8, 'diamonds') // 8 (different suit)
+    ];
+
+    const result = evaluateHand(holeCards, communityCards);
+    expect(result.type).toBe('royal-flush');
+    expect(result.rank).toBe(10);
+    expect(result.description).toBe('Royal Flush');
+  });
+
+  test('Straight Flush', () => {
+    const holeCards = [
+      createCard(9, 'spades'),  // 9
+      createCard(10, 'spades')  // 10
+    ];
+    const communityCards = [
+      createCard(11, 'spades'), // Jack
+      createCard(12, 'spades'), // Queen
+      createCard(13, 'spades'), // King
+      createCard(7, 'hearts'),  // 7 (different suit)
+      createCard(8, 'diamonds') // 8 (different suit)
+    ];
+
+    const result = evaluateHand(holeCards, communityCards);
+    expect(result.type).toBe('straight-flush');
+    expect(result.rank).toBe(9);
+    expect(result.description).toContain('Straight Flush');
+  });
+
+  test('Four of a Kind', () => {
+    const holeCards = [
+      createCard(7, 'hearts'),  // 7
+      createCard(7, 'diamonds') // 7
+    ];
+    const communityCards = [
+      createCard(7, 'clubs'),   // 7
+      createCard(7, 'spades'),  // 7
+      createCard(14, 'hearts'), // Ace
+      createCard(2, 'clubs'),   // 2
+      createCard(3, 'diamonds') // 3
+    ];
+
+    const result = evaluateHand(holeCards, communityCards);
+    expect(result.type).toBe('four-of-a-kind');
+    expect(result.rank).toBe(8);
+    expect(result.description).toContain('Four 7s');
+  });
+
+  test('Full House', () => {
+    const holeCards = [
+      createCard(8, 'hearts'),  // 8
+      createCard(8, 'diamonds') // 8
+    ];
+    const communityCards = [
+      createCard(8, 'clubs'),   // 8
+      createCard(9, 'hearts'),  // 9
+      createCard(9, 'spades'),  // 9
+      createCard(14, 'hearts'), // Ace
+      createCard(2, 'clubs')    // 2
+    ];
+
+    const result = evaluateHand(holeCards, communityCards);
+    expect(result.type).toBe('full-house');
+    expect(result.rank).toBe(7);
+    expect(result.description).toContain('Full of');
+  });
+
+  test('Flush', () => {
+    const holeCards = [
+      createCard(14, 'hearts'), // Ace
+      createCard(10, 'hearts')  // 10
+    ];
+    const communityCards = [
+      createCard(7, 'hearts'),  // 7
+      createCard(5, 'hearts'),  // 5
+      createCard(3, 'hearts'),  // 3
+      createCard(9, 'clubs'),   // 9 (different suit)
+      createCard(8, 'diamonds') // 8 (different suit)
+    ];
+
+    const result = evaluateHand(holeCards, communityCards);
+    expect(result.type).toBe('flush');
+    expect(result.rank).toBe(6);
+    expect(result.description).toContain('Flush');
+  });
+
+  test('Straight', () => {
+    const holeCards = [
+      createCard(14, 'hearts'), // Ace
+      createCard(2, 'diamonds') // 2
+    ];
+    const communityCards = [
+      createCard(3, 'clubs'),   // 3
+      createCard(4, 'hearts'),  // 4
+      createCard(5, 'spades'),  // 5
+      createCard(9, 'clubs'),   // 9
+      createCard(8, 'diamonds') // 8
+    ];
+
+    const result = evaluateHand(holeCards, communityCards);
+    expect(result.type).toBe('straight');
+    expect(result.rank).toBe(5);
+    expect(result.description).toContain('Straight');
+  });
+
+  test('High Card', () => {
+    const holeCards = [
+      createCard(14, 'hearts'), // Ace
+      createCard(7, 'diamonds') // 7
+    ];
+    const communityCards = [
+      createCard(2, 'clubs'),   // 2
+      createCard(4, 'hearts'),  // 4
+      createCard(6, 'spades'),  // 6
+      createCard(9, 'clubs'),   // 9
+      createCard(8, 'diamonds') // 8
+    ];
+
+    const result = evaluateHand(holeCards, communityCards);
+    expect(result.type).toBe('high-card');
+    expect(result.rank).toBe(1);
+    expect(result.description).toContain('High');
+  });
+
+  test('Hand Comparison', () => {
+    // Create two different hands for comparison
+    const hand1Hole = [createCard(14, 'hearts'), createCard(13, 'hearts')];
+    const hand1Community = [createCard(12, 'hearts'), createCard(11, 'hearts'), createCard(10, 'hearts'), createCard(9, 'clubs'), createCard(8, 'diamonds')];
+    const hand1 = evaluateHand(hand1Hole, hand1Community); // Royal Flush
+
+    const hand2Hole = [createCard(14, 'hearts'), createCard(7, 'diamonds')];
+    const hand2Community = [createCard(2, 'clubs'), createCard(4, 'hearts'), createCard(6, 'spades'), createCard(9, 'clubs'), createCard(8, 'diamonds')];
+    const hand2 = evaluateHand(hand2Hole, hand2Community); // High Card
+
+    const comparison = compareHands(hand1, hand2);
+    expect(comparison).toBe(1); // hand1 (Royal Flush) should beat hand2 (High Card)
+  });
+});
