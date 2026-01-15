@@ -96,3 +96,114 @@
 .deal-button:active {
   transform: translateY(0);
 }
+
+/* Betting Controls */
+.betting-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+
+.bet-button {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 80px;
+}
+
+.fold-button {
+  background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+}
+
+.fold-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 71, 87, 0.4);
+}
+
+.call-button {
+  background: linear-gradient(135deg, #3742fa 0%, #2f3542 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(55, 66, 250, 0.3);
+}
+
+.call-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(55, 66, 250, 0.4);
+}
+
+.raise-section {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.raise-input {
+  padding: 10px 15px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 16px;
+  width: 120px;
+  text-align: center;
+}
+
+.raise-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.raise-input:focus {
+  outline: none;
+  border-color: #ffa726;
+  box-shadow: 0 0 10px rgba(255, 167, 38, 0.5);
+}
+
+.raise-button {
+  background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(255, 167, 38, 0.3);
+}
+
+.raise-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 167, 38, 0.4);
+}
+
+.bet-button:active {
+  transform: translateY(0);
+}
+
+/* Game Info */
+.game-info {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+
+.game-info p {
+  margin: 0;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+.player-hand.folded {
+  opacity: 0.6;
+  filter: grayscale(50%);
+}
+
+.player-hand.folded h3 {
+  color: #ff6b6b;
+}

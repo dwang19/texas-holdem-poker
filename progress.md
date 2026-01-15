@@ -12,19 +12,20 @@
 - [x] Project styling and layout
 
 ## Current Status
-✅ **Poker hand evaluation algorithm implemented!**
+✅ **Betting controls implemented!**
 
 The game now has complete poker logic with:
 - **Hand Evaluation**: Full algorithm supporting all poker hands (Royal Flush → High Card)
 - **Card Dealing**: Visual cards with proper poker styling and suits
-- **Game Structure**: Ready for betting and game flow implementation
+- **Betting System**: Fold, call, and raise buttons with chip management
+- **Game Structure**: Interactive betting rounds with player turn management
 - **TypeScript Types**: Complete interfaces for players, cards, and game state
 
-**Next**: Add betting controls (fold, call, raise buttons) to make the game interactive!
+**Next**: Implement game phase management (preflop → flop → turn → river)!
 
 ## Next Tasks (Phase 2)
 - [x] Implement poker hand evaluation algorithm
-- [ ] Add betting controls (fold, call, raise buttons)
+- [x] Add betting controls (fold, call, raise buttons)
 - [ ] Create PlayerArea component for chip counts
 - [ ] Add game phase management (preflop → flop → turn → river)
 - [ ] Implement basic AI decision making
