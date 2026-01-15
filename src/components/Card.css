@@ -1,0 +1,140 @@
+.card {
+  display: inline-block;
+  position: relative;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: 'Arial', sans-serif;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.card--small {
+  width: 60px;
+  height: 84px;
+  font-size: 12px;
+}
+
+.card--medium {
+  width: 80px;
+  height: 112px;
+  font-size: 16px;
+}
+
+.card--large {
+  width: 100px;
+  height: 140px;
+  font-size: 20px;
+}
+
+.card__front {
+  width: 100%;
+  height: 100%;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px;
+}
+
+.card__corner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.card__corner--top-left {
+  align-self: flex-start;
+}
+
+.card__corner--bottom-right {
+  align-self: flex-end;
+  transform: rotate(180deg);
+}
+
+.card__rank {
+  font-weight: bold;
+  font-size: 1em;
+}
+
+.card__suit {
+  font-size: 0.8em;
+  margin-top: 2px;
+}
+
+.card__center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+}
+
+.card__suit-large {
+  font-size: 2em;
+  opacity: 0.8;
+}
+
+.card__rank--rotated,
+.card__suit--rotated {
+  transform: rotate(180deg);
+}
+
+/* Card Back Styles */
+.card__back {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 50%, #1a1a1a 100%);
+  border: 1px solid #666;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card__pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 4px, transparent 4px, transparent 8px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 4px, transparent 4px, transparent 8px);
+}
+
+/* Hidden/Empty Card States */
+.card--hidden .card__back,
+.card--empty .card__back {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+}
+
+.card--empty {
+  opacity: 0.3;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .card--large {
+    width: 80px;
+    height: 112px;
+    font-size: 16px;
+  }
+
+  .card--medium {
+    width: 60px;
+    height: 84px;
+    font-size: 12px;
+  }
+
+  .card--small {
+    width: 50px;
+    height: 70px;
+    font-size: 10px;
+  }
+}
