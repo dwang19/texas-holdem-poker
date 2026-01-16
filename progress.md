@@ -31,7 +31,7 @@ The game now features complete Texas Hold'em gameplay:
 - [x] Implement dealer/button rotation system (alternates between human/AI each round)
 - [x] Add blind system ($5 small blind, $10 big blind, $100 starting chips per player)
 - [x] Enhance turn management with proper betting order (UTG → MP → CO → SB → BB)
-- [ ] Add game initialization screen (username input, dealer selection, start button)
+- [x] Add game initialization screen (username input, dealer selection, start button)
 - [ ] Implement phase transition animations and visual feedback
 - [ ] Add card reveal animations for flop/turn/river with proper timing
 - [ ] Create hand strength assessment system for AI decision making
