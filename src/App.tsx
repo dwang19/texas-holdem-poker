@@ -9,17 +9,27 @@ import { evaluateHand, compareHands } from './game/pokerLogic';
 import './App.css';
 
 function App() {
-  // Initialize players with starting chips
-  const initialPlayers: Player[] = [
+  // Game initialization state
+  const [gameStarted, setGameStarted] = useState<boolean>(false);
+  const [humanPlayerName, setHumanPlayerName] = useState<string>('Player1');
+  const [humanIsDealerFirst, setHumanIsDealerFirst] = useState<boolean>(false);
+
+  // Round-based game state
+  const [roundNumber, setRoundNumber] = useState<number>(1);
+  const [gameOver, setGameOver] = useState<boolean>(false);
+  const [overallWinner, setOverallWinner] = useState<Player | null>(null);
+
+  // Initialize players with starting chips ($100 each)
+  const getInitialPlayers = (humanName: string, humanDealer: boolean) => [
     {
       id: 'human',
-      name: 'You',
+      name: humanName,
       cards: [],
-      chips: 1000,
+      chips: 100,
       isHuman: true,
-      isDealer: false,
-      isSmallBlind: true,
-      isBigBlind: false,
+      isDealer: humanDealer,
+      isSmallBlind: !humanDealer,
+      isBigBlind: humanDealer,
       currentBet: 0,
       hasFolded: false,
     },
@@ -27,18 +37,18 @@ function App() {
       id: 'ai',
       name: 'AI Player',
       cards: [],
-      chips: 1000,
+      chips: 100,
       isHuman: false,
-      isDealer: true,
-      isSmallBlind: false,
-      isBigBlind: true,
+      isDealer: !humanDealer,
+      isSmallBlind: humanDealer,
+      isBigBlind: !humanDealer,
       currentBet: 0,
       hasFolded: false,
     },
   ];
 
+  const [players, setPlayers] = useState<Player[]>(getInitialPlayers('Player1', false));
   const [deck, setDeck] = useState<Deck>(createDeck());
-  const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [communityCards, setCommunityCards] = useState<CardType[]>([]);
   const [burnedCards, setBurnedCards] = useState<CardType[]>([]);
   const [pot, setPot] = useState<number>(0);
@@ -53,6 +63,38 @@ function App() {
   const [animatingCardIndices, setAnimatingCardIndices] = useState<number[]>([]);
   const [burnAnimatingIndex, setBurnAnimatingIndex] = useState<number | null>(null);
   const [holeCardAnimating, setHoleCardAnimating] = useState<boolean>(false);
+
+  // Start the game with initialization parameters
+  const startGame = () => {
+    const initialPlayers = getInitialPlayers(humanPlayerName, humanIsDealerFirst);
+    setPlayers(initialPlayers);
+    setGameStarted(true);
+    setRoundNumber(1);
+    setGameOver(false);
+    setOverallWinner(null);
+    // Trigger the first hand deal
+    setTimeout(() => {
+      dealNewHand();
+    }, 100);
+  };
+
+  // Reset game to initial state
+  const resetGame = () => {
+    setGameStarted(false);
+    setGameOver(false);
+    setOverallWinner(null);
+    setRoundNumber(1);
+    setGamePhase('waiting');
+    setWinner(null);
+    setHandComplete(false);
+    setCommunityCards([]);
+    setBurnedCards([]);
+    setPot(0);
+    setCurrentBet(0);
+    setCurrentPlayerIndex(0);
+    setPlayers(getInitialPlayers('Player1', false));
+    setDeck(createDeck());
+  };
 
   const determineWinner = () => {
     const activePlayers = players.filter(p => !p.hasFolded);
@@ -90,16 +132,25 @@ function App() {
     const winningPlayer = playerHands[bestHandIndex].player;
 
     // Award the pot to the winner
-    setPlayers(prevPlayers =>
-      prevPlayers.map(player =>
-        player.id === winningPlayer.id
-          ? { ...player, chips: player.chips + pot }
-          : player
-      )
+    const updatedPlayers = players.map(player =>
+      player.id === winningPlayer.id
+        ? { ...player, chips: player.chips + pot }
+        : player
     );
 
+    setPlayers(updatedPlayers);
     setWinner(winningPlayer);
     setHandComplete(true);
+
+    // Check for bust condition (player with $0 chips)
+    const bustedPlayers = updatedPlayers.filter(p => p.chips <= 0);
+    if (bustedPlayers.length > 0) {
+      // Game over - one player has gone bust
+      const remainingPlayers = updatedPlayers.filter(p => p.chips > 0);
+      const gameWinner = remainingPlayers[0]; // Should only be one remaining player
+      setOverallWinner(gameWinner);
+      setGameOver(true);
+    }
   };
 
   const dealNewHand = () => {
@@ -120,15 +171,15 @@ function App() {
       hasFolded: false,
     }));
 
-    // Post blinds
+    // Post blinds ($5 small blind, $10 big blind)
     const SMALL_BLIND = 5;
     const BIG_BLIND = 10;
 
     const playersWithBlinds = resetPlayers.map(player => {
       if (player.isSmallBlind) {
-        return { ...player, chips: player.chips - SMALL_BLIND, currentBet: SMALL_BLIND };
+        return { ...player, chips: Math.max(0, player.chips - SMALL_BLIND), currentBet: SMALL_BLIND };
       } else if (player.isBigBlind) {
-        return { ...player, chips: player.chips - BIG_BLIND, currentBet: BIG_BLIND };
+        return { ...player, chips: Math.max(0, player.chips - BIG_BLIND), currentBet: BIG_BLIND };
       }
       return player;
     });
@@ -170,6 +221,27 @@ function App() {
         }, 600); // Animation duration
       }, 400); // Delay between first and second card
     }, 200); // Initial delay
+  };
+
+  // Start next round with dealer rotation
+  const startNextRound = () => {
+    // Rotate dealer/button positions
+    const nextRoundPlayers = players.map(player => ({
+      ...player,
+      isDealer: !player.isDealer,
+      isSmallBlind: !player.isSmallBlind,
+      isBigBlind: !player.isBigBlind,
+    }));
+
+    setPlayers(nextRoundPlayers);
+    setRoundNumber(roundNumber + 1);
+    setWinner(null);
+    setHandComplete(false);
+
+    // Start new hand after a brief delay
+    setTimeout(() => {
+      dealNewHand();
+    }, 500);
   };
 
   // Function to transition to the next game phase
@@ -266,8 +338,10 @@ function App() {
   };
 
   useEffect(() => {
-    dealNewHand();
-  }, []);
+    if (gameStarted && !gameOver) {
+      dealNewHand();
+    }
+  }, [gameStarted, roundNumber]);
 
   // Function to check if betting round is complete
   const isBettingRoundComplete = (players: Player[], currentBet: number): boolean => {
@@ -463,11 +537,124 @@ function App() {
     }
   };
 
+  // Show initialization screen if game hasn't started
+  if (!gameStarted) {
+    return (
+      <div className="App">
+        <header className="App-header">
+          <h1>Texas Hold'em Poker</h1>
+          <p>A React + TypeScript Poker Game</p>
+        </header>
+
+        <main className="game-container">
+          <div className="game-init-screen">
+            <h2>Welcome to Texas Hold'em!</h2>
+            <div className="init-form">
+              <div className="form-group">
+                <label htmlFor="player-name">Your Name:</label>
+                <input
+                  id="player-name"
+                  type="text"
+                  value={humanPlayerName}
+                  onChange={(e) => setHumanPlayerName(e.target.value || 'Player1')}
+                  placeholder="Enter your name"
+                  maxLength={20}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Who deals first?</label>
+                <div className="dealer-choice">
+                  <label>
+                    <input
+                      type="radio"
+                      name="dealer"
+                      checked={humanIsDealerFirst}
+                      onChange={() => setHumanIsDealerFirst(true)}
+                    />
+                    You deal first (Small Blind)
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="dealer"
+                      checked={!humanIsDealerFirst}
+                      onChange={() => setHumanIsDealerFirst(false)}
+                    />
+                    AI deals first (Small Blind)
+                  </label>
+                </div>
+              </div>
+
+              <div className="game-rules">
+                <h3>Game Rules:</h3>
+                <ul>
+                  <li>Each player starts with $100</li>
+                  <li>Small Blind: $5, Big Blind: $10</li>
+                  <li>Play continues until one player loses all chips</li>
+                  <li>Dealer position alternates each round</li>
+                </ul>
+              </div>
+
+              <button
+                className="start-game-button"
+                onClick={startGame}
+                disabled={!humanPlayerName.trim()}
+              >
+                Start Game
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Show victory/defeat screen if game is over
+  if (gameOver && overallWinner) {
+    const isHumanWinner = overallWinner.isHuman;
+    return (
+      <div className="App">
+        <header className="App-header">
+          <h1>Texas Hold'em Poker</h1>
+          <p>A React + TypeScript Poker Game</p>
+        </header>
+
+        <main className="game-container">
+          <div className={`game-over-screen ${isHumanWinner ? 'victory' : 'defeat'}`}>
+            <h2>{isHumanWinner ? '🎉 Victory! 🎉' : '💔 Defeat 💔'}</h2>
+            <p className="winner-message">
+              {isHumanWinner
+                ? `Congratulations ${overallWinner.name}! You won all the chips!`
+                : `${overallWinner.name} won all the chips. Better luck next time!`
+              }
+            </p>
+            <div className="final-scores">
+              <h3>Final Scores:</h3>
+              {players.map(player => (
+                <p key={player.id}>
+                  {player.name}: ${player.chips}
+                </p>
+              ))}
+            </div>
+            <button className="start-over-button" onClick={resetGame}>
+              Start Over
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="App">
       <header className="App-header">
         <h1>Texas Hold'em Poker</h1>
         <p>A React + TypeScript Poker Game</p>
+        <div className="game-info-bar">
+          <span>Round {roundNumber}</span>
+          <span>{humanPlayerName} vs AI Player</span>
+        </div>
       </header>
 
       <main className="game-container">
@@ -603,11 +790,11 @@ function App() {
           )}
 
           <button
-            onClick={dealNewHand}
+            onClick={handComplete && !gameOver ? startNextRound : dealNewHand}
             className="deal-button"
-            disabled={!handComplete && gamePhase !== 'waiting'}
+            disabled={(!handComplete && gamePhase !== 'waiting') || gameOver}
           >
-            {handComplete ? 'Deal New Hand' : 'Hand in Progress'}
+            {handComplete && !gameOver ? 'Next Round' : handComplete ? 'Deal New Hand' : 'Hand in Progress'}
           </button>
           <p>Cards remaining in deck: {deck.getRemainingCards()}</p>
         </div>

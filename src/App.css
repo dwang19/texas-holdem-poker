@@ -278,3 +278,229 @@
   box-shadow: none;
 }
 
+/* Game Initialization Screen */
+.game-init-screen {
+  background: rgba(255, 255, 255, 0.95);
+  color: #2c3e50;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.game-init-screen h2 {
+  color: #3282b8;
+  margin-bottom: 30px;
+  font-size: 28px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.init-form {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.form-group {
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.init-form input[type="text"] {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e1e8ed;
+  border-radius: 10px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.init-form input[type="text"]:focus {
+  outline: none;
+  border-color: #3282b8;
+  box-shadow: 0 0 10px rgba(50, 130, 184, 0.3);
+}
+
+.dealer-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dealer-choice label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 10px;
+  border: 2px solid #e1e8ed;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.dealer-choice label:hover {
+  background: rgba(50, 130, 184, 0.1);
+  border-color: #3282b8;
+}
+
+.dealer-choice input[type="radio"] {
+  margin: 0;
+}
+
+.game-rules {
+  background: rgba(50, 130, 184, 0.1);
+  padding: 20px;
+  border-radius: 15px;
+  border-left: 4px solid #3282b8;
+}
+
+.game-rules h3 {
+  color: #3282b8;
+  margin-bottom: 15px;
+}
+
+.game-rules ul {
+  text-align: left;
+  padding-left: 20px;
+}
+
+.game-rules li {
+  margin-bottom: 8px;
+  color: #2c3e50;
+}
+
+.start-game-button {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  padding: 15px 40px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+  margin-top: 20px;
+}
+
+.start-game-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+}
+
+.start-game-button:active {
+  transform: translateY(0);
+}
+
+.start-game-button:disabled {
+  background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Game Over Screen */
+.game-over-screen {
+  background: rgba(255, 255, 255, 0.95);
+  color: #2c3e50;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.game-over-screen.victory {
+  border: 3px solid #28a745;
+}
+
+.game-over-screen.defeat {
+  border: 3px solid #dc3545;
+}
+
+.game-over-screen h2 {
+  font-size: 32px;
+  margin-bottom: 20px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.game-over-screen.victory h2 {
+  color: #28a745;
+}
+
+.game-over-screen.defeat h2 {
+  color: #dc3545;
+}
+
+.winner-message {
+  font-size: 18px;
+  margin-bottom: 30px;
+  line-height: 1.5;
+}
+
+.final-scores {
+  background: rgba(50, 130, 184, 0.1);
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 30px;
+}
+
+.final-scores h3 {
+  color: #3282b8;
+  margin-bottom: 15px;
+}
+
+.final-scores p {
+  margin: 8px 0;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.start-over-button {
+  background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
+  color: white;
+  border: none;
+  padding: 15px 40px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+}
+
+.start-over-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+}
+
+.start-over-button:active {
+  transform: translateY(0);
+}
+
+/* Game Info Bar */
+.game-info-bar {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.game-info-bar span {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 20px;
+}
+

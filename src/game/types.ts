@@ -28,6 +28,11 @@ export interface GameState {
   gameStarted: boolean;
   winner: Player | null;
   handComplete: boolean;
+  roundNumber: number;
+  gameOver: boolean;
+  overallWinner: Player | null;
+  humanPlayerName: string;
+  humanIsDealerFirst: boolean;
 }
 
 export interface PokerHand {
