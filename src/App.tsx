@@ -254,6 +254,7 @@ function App() {
 
   // Function to transition to the next game phase
   const advanceGamePhase = () => {
+    console.log('DEBUG: advanceGamePhase called, players at start:', players.map(p => ({ name: p.name, chips: p.chips })));
     const activePlayers = players.filter(p => !p.hasFolded);
 
     if (activePlayers.length <= 1) {
@@ -632,6 +633,7 @@ function App() {
     if (bettingRoundComplete) {
       // Advance to next phase
       setTimeout(() => {
+        console.log('DEBUG: About to call advanceGamePhase, current players:', players.map(p => ({ name: p.name, chips: p.chips })));
         advanceGamePhase();
       }, 1000);
       return;
