@@ -414,12 +414,6 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    if (gameStarted && !gameOver) {
-      dealNewHand();
-    }
-  }, [gameStarted]);
-
   // Function to check if betting round is complete
   const isBettingRoundComplete = (players: Player[], currentBet: number): boolean => {
     const activePlayers = players.filter(p => !p.hasFolded);
