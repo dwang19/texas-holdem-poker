@@ -24,7 +24,7 @@ The game now has complete poker logic with:
 **Next**: Implement game phase management (preflop → flop → turn → river)!
 
 ## Next Tasks (Phase 3: Game Flow)
-- [ ] Implement game phase state management (preflop → flop → turn → river)
+- [x] Implement game phase state management (preflop → flop → turn → river)
 - [ ] Add card dealing animations with burn card mechanics
 - [ ] Create round-based game structure (multiple hands until one player busts)
 - [ ] Implement dealer/button rotation system (alternates between human/AI each round)
