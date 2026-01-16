@@ -37,7 +37,7 @@ The game now features complete Texas Hold'em gameplay:
 - [x] Create hand strength assessment system for AI decision making
 - [x] Add betting round completion detection (all players acted)
 - [x] Implement fold/call/raise action validation based on game state
-- [ ] Add game end conditions (player reaches $0, show victory/defeat screen)
+- [x] Add game end conditions (player reaches $0, show victory/defeat screen)
 - [ ] Create "Next Round" functionality with chip reset and dealer rotation
 - [ ] Add visual indicators for current player turn and betting action
 - [ ] Implement showdown phase with both hands revealed and winner determination

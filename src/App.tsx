@@ -103,50 +103,48 @@ function App() {
   const determineWinner = () => {
     const activePlayers = players.filter(p => !p.hasFolded);
 
+    let updatedPlayers = [...players];
+    let winningPlayer: Player;
+
     if (activePlayers.length === 1) {
       // Only one player left, they win by default
-      const winningPlayer = activePlayers[0];
-      setPlayers(prevPlayers =>
-        prevPlayers.map(player =>
-          player.id === winningPlayer.id
-            ? { ...player, chips: player.chips + pot }
-            : player
-        )
+      winningPlayer = activePlayers[0];
+      updatedPlayers = updatedPlayers.map(player =>
+        player.id === winningPlayer.id
+          ? { ...player, chips: player.chips + pot }
+          : player
       );
-      setWinner(winningPlayer);
-      setHandComplete(true);
-      return;
-    }
+    } else {
+      // Multiple players still active, evaluate hands
+      const playerHands: { player: Player; hand: PokerHand }[] = activePlayers.map(player => ({
+        player,
+        hand: evaluateHand(player.cards, communityCards)
+      }));
 
-    // Multiple players still active, evaluate hands
-    const playerHands: { player: Player; hand: PokerHand }[] = activePlayers.map(player => ({
-      player,
-      hand: evaluateHand(player.cards, communityCards)
-    }));
-
-    // Find the best hand
-    let bestHandIndex = 0;
-    for (let i = 1; i < playerHands.length; i++) {
-      const comparison = compareHands(playerHands[i].hand, playerHands[bestHandIndex].hand);
-      if (comparison > 0) {
-        bestHandIndex = i;
+      // Find the best hand
+      let bestHandIndex = 0;
+      for (let i = 1; i < playerHands.length; i++) {
+        const comparison = compareHands(playerHands[i].hand, playerHands[bestHandIndex].hand);
+        if (comparison > 0) {
+          bestHandIndex = i;
+        }
       }
+
+      winningPlayer = playerHands[bestHandIndex].player;
+
+      // Award the pot to the winner
+      updatedPlayers = updatedPlayers.map(player =>
+        player.id === winningPlayer.id
+          ? { ...player, chips: player.chips + pot }
+          : player
+      );
     }
-
-    const winningPlayer = playerHands[bestHandIndex].player;
-
-    // Award the pot to the winner
-    const updatedPlayers = players.map(player =>
-      player.id === winningPlayer.id
-        ? { ...player, chips: player.chips + pot }
-        : player
-    );
 
     setPlayers(updatedPlayers);
     setWinner(winningPlayer);
     setHandComplete(true);
 
-    // Check for bust condition (player with $0 chips)
+    // Check for bust condition (player with $0 chips) - happens in both cases
     const bustedPlayers = updatedPlayers.filter(p => p.chips <= 0);
     if (bustedPlayers.length > 0) {
       // Game over - one player has gone bust
@@ -560,10 +558,11 @@ function App() {
         break;
 
       case 'call':
-        const callAmount = validationResult.callAmount!;
+        const callValidation = validationResult as { valid: boolean; reason?: string; callAmount?: number };
+        const callAmount = callValidation.callAmount!;
         newPlayers[currentPlayerIndex] = {
           ...currentPlayer,
-          chips: currentPlayer.chips - callAmount,
+          chips: Math.max(0, currentPlayer.chips - callAmount),
           currentBet: currentPlayer.currentBet + callAmount,
           hasActedThisRound: true,
         };
@@ -571,10 +570,11 @@ function App() {
         break;
 
       case 'raise':
-        const totalRaiseAmount = validationResult.totalRaiseAmount!;
+        const raiseValidation = validationResult as { valid: boolean; reason?: string; totalRaiseAmount?: number; minRaise?: number };
+        const totalRaiseAmount = raiseValidation.totalRaiseAmount!;
         newPlayers[currentPlayerIndex] = {
           ...currentPlayer,
-          chips: currentPlayer.chips - totalRaiseAmount,
+          chips: Math.max(0, currentPlayer.chips - totalRaiseAmount),
           currentBet: currentPlayer.currentBet + totalRaiseAmount,
           hasActedThisRound: true,
         };
@@ -654,7 +654,7 @@ function App() {
             if (aiPlayer.chips >= aiBetAmount) {
               updatedPlayers[nextPlayerIndex] = {
                 ...aiPlayer,
-                chips: aiPlayer.chips - aiBetAmount,
+                chips: Math.max(0, aiPlayer.chips - aiBetAmount),
                 currentBet: aiPlayer.currentBet + aiBetAmount,
                 hasActedThisRound: true,
               };
@@ -669,7 +669,7 @@ function App() {
             if (aiPlayer.chips >= totalRaiseAmount) {
               updatedPlayers[nextPlayerIndex] = {
                 ...aiPlayer,
-                chips: aiPlayer.chips - totalRaiseAmount,
+                chips: Math.max(0, aiPlayer.chips - totalRaiseAmount),
                 currentBet: aiPlayer.currentBet + totalRaiseAmount,
                 hasActedThisRound: true,
               };
@@ -682,7 +682,7 @@ function App() {
               if (aiPlayer.chips >= aiBetAmount) {
                 updatedPlayers[nextPlayerIndex] = {
                   ...aiPlayer,
-                  chips: aiPlayer.chips - aiBetAmount,
+                  chips: Math.max(0, aiPlayer.chips - aiBetAmount),
                   currentBet: aiPlayer.currentBet + aiBetAmount,
                   hasActedThisRound: true,
                 };
