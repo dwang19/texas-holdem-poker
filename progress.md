@@ -33,7 +33,7 @@ The game now features complete Texas Hold'em gameplay:
 - [x] Enhance turn management with proper betting order (UTG → MP → CO → SB → BB)
 - [x] Add game initialization screen (username input, dealer selection, start button)
 - [x] Implement phase transition animations and visual feedback
-- [ ] Add card reveal animations for flop/turn/river with proper timing
+- [x] Add card reveal animations for flop/turn/river with proper timing
 - [ ] Create hand strength assessment system for AI decision making
 - [ ] Add betting round completion detection (all players acted)
 - [ ] Implement fold/call/raise action validation based on game state

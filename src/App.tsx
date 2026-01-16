@@ -312,39 +312,89 @@ function App() {
         setBurnedCards(newBurnedCards);
         setBurnAnimatingIndex(null);
 
-        // Then set community cards and animate them
-        setCommunityCards(newCommunityCards);
+        // For flop, implement staggered card reveals
+        if (gamePhase === 'preflop') {
+          // Flop: Deal 3 cards with staggered timing
+          const flopCards = cardsToDeal;
+          let currentCardIndex = 0;
 
-        // Animate the cards that were just dealt
-        const startIndex = communityCards.length;
-        const animatingIndices = cardsToDeal.map((_, index) => startIndex + index);
-        setAnimatingCardIndices(animatingIndices);
+          const dealNextFlopCard = () => {
+            if (currentCardIndex < flopCards.length) {
+              // Add one card at a time
+              const cardToAdd = flopCards[currentCardIndex];
+              const cardIndex = communityCards.length + currentCardIndex;
 
-        // Complete the phase transition after animation
-        setTimeout(() => {
-          setGamePhase(newPhase);
-          setDeck(deck);
-          setAnimatingCardIndices([]);
-          setIsDealing(false);
+              setCommunityCards(prev => [...prev, cardToAdd]);
+              setAnimatingCardIndices([cardIndex]);
 
-          // Reset current bets for new betting round
-          const resetBetPlayers = players.map(player => ({
-            ...player,
-            currentBet: 0,
-          }));
-          setPlayers(resetBetPlayers);
-          setCurrentBet(0);
+              currentCardIndex++;
 
-          // Find first active player for new betting round
-          const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
-          setCurrentPlayerIndex(firstActivePlayerIndex);
+              // Schedule next card after animation delay
+              setTimeout(() => {
+                setAnimatingCardIndices([]); // Clear animation for previous card
+                dealNextFlopCard(); // Deal next card
+              }, 600); // 600ms delay between each flop card
+            } else {
+              // All flop cards dealt, complete the phase transition
+              setTimeout(() => {
+                setGamePhase(newPhase);
+                setDeck(deck);
+                setIsDealing(false);
 
-          // Clear phase announcement after animation
+                // Reset current bets for new betting round
+                const resetBetPlayers = players.map(player => ({
+                  ...player,
+                  currentBet: 0,
+                }));
+                setPlayers(resetBetPlayers);
+                setCurrentBet(0);
+
+                // Find first active player for new betting round
+                const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
+                setCurrentPlayerIndex(firstActivePlayerIndex);
+
+                // Clear phase announcement after animation
+                setTimeout(() => {
+                  setPhaseAnnouncement(null);
+                }, 2500);
+              }, 400); // Brief pause after last card
+            }
+          };
+
+          // Start dealing the first flop card
+          setTimeout(dealNextFlopCard, 300);
+        } else {
+          // Turn/River: Deal single card with animation
+          setCommunityCards(newCommunityCards);
+          const startIndex = communityCards.length;
+          setAnimatingCardIndices([startIndex]);
+
+          // Complete the phase transition after animation
           setTimeout(() => {
-            setPhaseAnnouncement(null);
-          }, 2500);
-        }, 1200); // Wait for enhanced card dealing animation
-      }, 1000); // Wait for enhanced burn animation
+            setGamePhase(newPhase);
+            setDeck(deck);
+            setAnimatingCardIndices([]);
+            setIsDealing(false);
+
+            // Reset current bets for new betting round
+            const resetBetPlayers = players.map(player => ({
+              ...player,
+              currentBet: 0,
+            }));
+            setPlayers(resetBetPlayers);
+            setCurrentBet(0);
+
+            // Find first active player for new betting round
+            const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
+            setCurrentPlayerIndex(firstActivePlayerIndex);
+
+            // Clear phase announcement after animation
+            setTimeout(() => {
+              setPhaseAnnouncement(null);
+            }, 2500);
+          }, 1200); // Wait for single card dealing animation
+        }
+      }, 1000); // Wait for burn animation
     }
   };
 
