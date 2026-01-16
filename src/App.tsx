@@ -226,11 +226,12 @@ function App() {
     }, 200); // Initial delay
   };
 
-  // Start next round with dealer rotation
+  // Start next round with dealer rotation and chip reset
   const startNextRound = () => {
-    // Rotate dealer/button positions
+    // Rotate dealer/button positions and reset chips to $100 each
     const nextRoundPlayers = players.map(player => ({
       ...player,
+      chips: 100, // Reset chips for new round
       isDealer: !player.isDealer,
       isSmallBlind: !player.isSmallBlind,
       isBigBlind: !player.isBigBlind,
@@ -996,6 +997,7 @@ function App() {
         <div className="game-controls">
           <div className="game-info">
             <p>Pot: ${pot}</p>
+            <p>Total Money in Play: ${players.reduce((total, player) => total + player.chips, 0) + pot}</p>
             <p>Current Bet: ${currentBet}</p>
             <p>Phase: {gamePhase}</p>
             <p>Current Player: {players[currentPlayerIndex]?.name || 'None'}</p>
