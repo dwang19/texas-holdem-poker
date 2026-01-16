@@ -103,6 +103,7 @@ function App() {
   };
 
   const determineWinner = () => {
+    console.log('DEBUG: determineWinner called');
     const activePlayers = players.filter(p => !p.hasFolded);
 
     let updatedPlayers = [...players];
@@ -144,6 +145,7 @@ function App() {
 
     setPlayers(updatedPlayers);
     setWinner(winningPlayer);
+    console.log('DEBUG: Setting handComplete to true in determineWinner');
     setHandComplete(true);
 
     // Check for bust condition (player with $0 chips) - happens in both cases
@@ -200,6 +202,7 @@ function App() {
     setGamePhase('preflop');
     setRaiseAmount('');
     setWinner(null);
+    console.log('DEBUG: Setting handComplete to false in dealNewHand');
     setHandComplete(false);
 
     // Animate hole card dealing
@@ -244,6 +247,7 @@ function App() {
     setPlayers(nextRoundPlayers);
     setRoundNumber(roundNumber + 1);
     setWinner(null);
+    console.log('DEBUG: Setting handComplete to false in startNextRound');
     setHandComplete(false);
 
     // Start new hand after a brief delay
@@ -1093,7 +1097,14 @@ function App() {
           )}
 
           <button
-            onClick={handComplete && !gameOver ? startNextRound : dealNewHand}
+            onClick={() => {
+              console.log('DEBUG: Button clicked, handComplete:', handComplete, 'gameOver:', gameOver, 'gamePhase:', gamePhase);
+              if (handComplete && !gameOver) {
+                startNextRound();
+              } else {
+                dealNewHand();
+              }
+            }}
             className="deal-button"
             disabled={(!handComplete && gamePhase !== 'waiting') || gameOver}
           >
