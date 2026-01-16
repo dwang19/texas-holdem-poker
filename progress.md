@@ -38,7 +38,7 @@ The game now features complete Texas Hold'em gameplay:
 - [x] Add betting round completion detection (all players acted)
 - [x] Implement fold/call/raise action validation based on game state
 - [x] Add game end conditions (player reaches $0, show victory/defeat screen)
-- [ ] Create "Next Round" functionality with chip reset and dealer rotation
+- [x] Create "Next Round" functionality with chip reset and dealer rotation
 - [ ] Add visual indicators for current player turn and betting action
 - [ ] Implement showdown phase with both hands revealed and winner determination
 - [ ] Add hand highlighting system (winning cards glow, different colors for players)
