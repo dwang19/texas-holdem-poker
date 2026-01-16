@@ -258,6 +258,18 @@ function App() {
       return;
     }
 
+    // Check if all active players are all-in (have bet all their chips)
+    const allPlayersAllIn = activePlayers.every(player => player.chips === 0);
+    if (allPlayersAllIn) {
+      console.log('All active players are all-in, going to showdown');
+      setGamePhase('showdown');
+      setCurrentPlayerIndex(-1);
+      setTimeout(() => {
+        determineWinner();
+      }, 500);
+      return;
+    }
+
     setIsDealing(true);
 
     let newCommunityCards = [...communityCards];
@@ -598,8 +610,12 @@ function App() {
     const bettingRoundComplete = isBettingRoundComplete(newPlayers, newCurrentBet);
     const activePlayers = newPlayers.filter(p => !p.hasFolded);
 
-    if (activePlayers.length <= 1) {
-      // Game should end if only one player remains
+    // Check if all active players are all-in (have 0 chips)
+    const allPlayersAllIn = activePlayers.every(player => player.chips === 0);
+
+    if (activePlayers.length <= 1 || allPlayersAllIn) {
+      // Game should end if only one player remains or all are all-in
+      console.log('Ending hand - active players:', activePlayers.length, 'all all-in:', allPlayersAllIn);
       setGamePhase('showdown');
       setCurrentPlayerIndex(-1);
       setTimeout(() => {
