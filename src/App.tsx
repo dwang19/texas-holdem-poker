@@ -70,6 +70,7 @@ function App() {
 
   // Start the game with initialization parameters
   const startGame = () => {
+    console.log('DEBUG: startGame called');
     const initialPlayers = getInitialPlayers(humanPlayerName, humanIsDealerFirst);
     setPlayers(initialPlayers);
     setGameStarted(true);
@@ -84,6 +85,7 @@ function App() {
 
   // Reset game to initial state
   const resetGame = () => {
+    console.log('DEBUG: resetGame called');
     setGameStarted(false);
     setGameOver(false);
     setOverallWinner(null);
@@ -156,6 +158,7 @@ function App() {
   };
 
   const dealNewHand = () => {
+    console.log('DEBUG: dealNewHand called, current players chips:', players.map(p => ({ name: p.name, chips: p.chips })));
     const newDeck = createDeck();
 
     // Deal hole cards to players
@@ -228,6 +231,7 @@ function App() {
 
   // Start next round with dealer rotation and chip reset
   const startNextRound = () => {
+    console.log('DEBUG: startNextRound called, current players chips:', players.map(p => ({ name: p.name, chips: p.chips })));
     // Rotate dealer/button positions and reset chips to $100 each
     const nextRoundPlayers = players.map(player => ({
       ...player,
@@ -356,11 +360,13 @@ function App() {
                 setIsDealing(false);
 
                 // Reset current bets for new betting round
+                console.log('DEBUG: Flop phase transition - players before reset:', players.map(p => ({ name: p.name, chips: p.chips })));
                 const resetBetPlayers = players.map(player => ({
                   ...player,
                   currentBet: 0,
                   hasActedThisRound: false, // Reset for new betting round
                 }));
+                console.log('DEBUG: Flop phase transition - players after reset:', resetBetPlayers.map(p => ({ name: p.name, chips: p.chips })));
                 setPlayers(resetBetPlayers);
                 setCurrentBet(0);
 
@@ -392,11 +398,13 @@ function App() {
             setIsDealing(false);
 
             // Reset current bets for new betting round
+            console.log('DEBUG: Phase transition - players before reset:', players.map(p => ({ name: p.name, chips: p.chips })));
             const resetBetPlayers = players.map(player => ({
               ...player,
               currentBet: 0,
               hasActedThisRound: false, // Reset for new betting round
             }));
+            console.log('DEBUG: Phase transition - players after reset:', resetBetPlayers.map(p => ({ name: p.name, chips: p.chips })));
             setPlayers(resetBetPlayers);
             setCurrentBet(0);
 
@@ -552,6 +560,7 @@ function App() {
     }
 
     // Execute the validated action
+    console.log('DEBUG: Betting action - action:', action, 'players before:', players.map(p => ({ name: p.name, chips: p.chips, currentBet: p.currentBet })));
     let newPlayers = [...players];
     let newPot = pot;
     let newCurrentBet = currentBet;
@@ -597,6 +606,7 @@ function App() {
         break;
     }
 
+    console.log('DEBUG: Betting action - players after:', newPlayers.map(p => ({ name: p.name, chips: p.chips, currentBet: p.currentBet })));
     setPlayers(newPlayers);
     setPot(newPot);
     setCurrentBet(newCurrentBet);
