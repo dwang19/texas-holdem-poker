@@ -395,6 +395,7 @@ function App() {
             const resetBetPlayers = players.map(player => ({
               ...player,
               currentBet: 0,
+              hasActedThisRound: false, // Reset for new betting round
             }));
             setPlayers(resetBetPlayers);
             setCurrentBet(0);
@@ -417,7 +418,7 @@ function App() {
     if (gameStarted && !gameOver) {
       dealNewHand();
     }
-  }, [gameStarted, roundNumber]);
+  }, [gameStarted]);
 
   // Function to check if betting round is complete
   const isBettingRoundComplete = (players: Player[], currentBet: number): boolean => {
