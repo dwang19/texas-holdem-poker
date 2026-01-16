@@ -101,7 +101,9 @@ function App() {
   };
 
   const determineWinner = () => {
+    console.log('determineWinner called');
     const activePlayers = players.filter(p => !p.hasFolded);
+    console.log('activePlayers:', activePlayers);
 
     let updatedPlayers = [...players];
     let winningPlayer: Player;
@@ -249,7 +251,9 @@ function App() {
 
   // Function to transition to the next game phase
   const advanceGamePhase = () => {
+    console.log('advanceGamePhase called, current phase:', gamePhase);
     const activePlayers = players.filter(p => !p.hasFolded);
+    console.log('activePlayers in advanceGamePhase:', activePlayers);
 
     if (activePlayers.length <= 1) {
       setGamePhase('showdown');
@@ -502,7 +506,10 @@ function App() {
   };
 
   const handleBettingAction = (action: 'fold' | 'call' | 'raise') => {
+    console.log('handleBettingAction called with action:', action);
     const currentPlayer = players[currentPlayerIndex];
+    console.log('currentPlayer:', currentPlayer);
+    console.log('currentPlayerIndex:', currentPlayerIndex);
 
     // Basic validation - only human player can trigger actions and only when it's their turn
     if (!currentPlayer || !currentPlayer.isHuman) {
@@ -616,13 +623,25 @@ function App() {
 
     // If next player is AI, let AI make decision
     if (nextPlayerIndex !== -1 && !newPlayers[nextPlayerIndex].isHuman && !newPlayers[nextPlayerIndex].hasFolded) {
+      console.log('AI turn - nextPlayerIndex:', nextPlayerIndex);
+      console.log('AI player:', newPlayers[nextPlayerIndex]);
+
       // Show AI thinking animation
       setAiActionDisplay({ action: '', isThinking: true });
 
       setTimeout(() => {
+        console.log('AI thinking timeout triggered');
         // AI makes strategic decision
         const aiPlayer = newPlayers[nextPlayerIndex];
         const activePlayersCount = newPlayers.filter(p => !p.hasFolded).length;
+
+        console.log('Getting AI decision with:');
+        console.log('- aiPlayer:', aiPlayer);
+        console.log('- communityCards:', communityCards);
+        console.log('- newCurrentBet:', newCurrentBet);
+        console.log('- newPot:', newPot);
+        console.log('- gamePhase:', gamePhase);
+        console.log('- activePlayersCount:', activePlayersCount);
 
         const aiDecision = getAIDecision(
           aiPlayer,
@@ -634,13 +653,17 @@ function App() {
           aiPersonality
         );
 
+        console.log('AI decision result:', aiDecision);
+
         let aiBetAmount = 0;
         let updatedPlayers = [...newPlayers];
         let updatedPot = newPot;
         let updatedCurrentBet = newCurrentBet;
 
+        console.log('Executing AI action:', aiDecision.action);
         switch (aiDecision.action) {
           case 'fold':
+            console.log('AI folding');
             updatedPlayers[nextPlayerIndex] = {
               ...aiPlayer,
               hasFolded: true,
@@ -650,7 +673,9 @@ function App() {
             break;
 
           case 'call':
+            console.log('AI calling');
             aiBetAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
+            console.log('aiBetAmount:', aiBetAmount, 'aiPlayer.chips:', aiPlayer.chips);
             if (aiPlayer.chips >= aiBetAmount) {
               updatedPlayers[nextPlayerIndex] = {
                 ...aiPlayer,
@@ -664,11 +689,15 @@ function App() {
             break;
 
           case 'raise':
+            console.log('AI raising');
             const raiseAmount = aiDecision.amount || 0;
             const callAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
             const totalRaiseAmount = callAmount + raiseAmount;
+            console.log('raiseAmount:', raiseAmount, 'callAmount:', callAmount, 'totalRaiseAmount:', totalRaiseAmount);
+            console.log('aiPlayer.chips:', aiPlayer.chips);
 
             if (aiPlayer.chips >= totalRaiseAmount) {
+              console.log('AI can raise full amount');
               updatedPlayers[nextPlayerIndex] = {
                 ...aiPlayer,
                 chips: Math.max(0, aiPlayer.chips - totalRaiseAmount),
@@ -677,8 +706,10 @@ function App() {
               };
               updatedPot += totalRaiseAmount;
               updatedCurrentBet = aiPlayer.currentBet + totalRaiseAmount;
+              console.log('updatedCurrentBet set to:', updatedCurrentBet);
               setAiActionDisplay({ action: 'raises', amount: totalRaiseAmount, isThinking: false });
             } else {
+              console.log('AI cannot raise full amount, falling back to call');
               // If can't raise the full amount, just call
               const fallbackCallAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
               if (aiPlayer.chips >= fallbackCallAmount) {
@@ -695,12 +726,18 @@ function App() {
             break;
         }
 
+        console.log('Setting state after AI action:');
+        console.log('updatedPot:', updatedPot);
+        console.log('updatedCurrentBet:', updatedCurrentBet);
+        console.log('updatedPlayers:', updatedPlayers);
+
         setPot(updatedPot);
         setCurrentBet(updatedCurrentBet);
         setPlayers(updatedPlayers);
 
         // Clear AI action display after a delay
         setTimeout(() => {
+          console.log('Clearing AI action display');
           setAiActionDisplay(null);
         }, 2500);
 
@@ -708,20 +745,30 @@ function App() {
         const aiBettingRoundComplete = isBettingRoundComplete(updatedPlayers, updatedCurrentBet);
         const aiActivePlayers = updatedPlayers.filter(p => !p.hasFolded);
 
+        console.log('After AI action:');
+        console.log('aiBettingRoundComplete:', aiBettingRoundComplete);
+        console.log('aiActivePlayers.length:', aiActivePlayers.length);
+
         if (aiActivePlayers.length <= 1) {
+          console.log('Only 1 or fewer active players, going to showdown');
           setGamePhase('showdown');
           setCurrentPlayerIndex(-1);
           setTimeout(() => {
+            console.log('Calling determineWinner');
             determineWinner();
           }, 500);
         } else if (aiBettingRoundComplete) {
+          console.log('Betting round complete, advancing to next phase');
           // Advance to next phase
           setTimeout(() => {
+            console.log('Calling advanceGamePhase');
             advanceGamePhase();
           }, 1000);
         } else {
+          console.log('Betting round not complete, continuing to next player');
           // Continue to next player
           const nextAiPlayerIndex = getNextActivePlayerIndex(updatedPlayers, nextPlayerIndex);
+          console.log('nextAiPlayerIndex:', nextAiPlayerIndex);
           setCurrentPlayerIndex(nextAiPlayerIndex);
         }
       }, 1500); // Longer delay for AI decision
