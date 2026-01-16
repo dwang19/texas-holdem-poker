@@ -431,11 +431,121 @@ function App() {
     return players.findIndex(p => p.id === nextPlayerId);
   };
 
+  // Validation functions for betting actions
+  const validateFoldAction = (player: Player, gamePhase: string): { valid: boolean; reason?: string } => {
+    // Fold should always be allowed during betting phases
+    const bettingPhases = ['preflop', 'flop', 'turn', 'river'];
+    if (!bettingPhases.includes(gamePhase)) {
+      return { valid: false, reason: 'Cannot fold outside of betting rounds' };
+    }
+
+    if (player.hasFolded) {
+      return { valid: false, reason: 'Player has already folded' };
+    }
+
+    return { valid: true };
+  };
+
+  const validateCallAction = (player: Player, currentBet: number, gamePhase: string): { valid: boolean; reason?: string; callAmount?: number } => {
+    const bettingPhases = ['preflop', 'flop', 'turn', 'river'];
+    if (!bettingPhases.includes(gamePhase)) {
+      return { valid: false, reason: 'Cannot call outside of betting rounds' };
+    }
+
+    if (player.hasFolded) {
+      return { valid: false, reason: 'Player has already folded' };
+    }
+
+    const callAmount = Math.max(0, currentBet - player.currentBet);
+
+    if (callAmount > player.chips) {
+      return { valid: false, reason: `Insufficient chips. Need $${callAmount} to call, but only have $${player.chips}` };
+    }
+
+    return { valid: true, callAmount };
+  };
+
+  const validateRaiseAction = (
+    player: Player,
+    currentBet: number,
+    raiseAmountStr: string,
+    gamePhase: string
+  ): { valid: boolean; reason?: string; totalRaiseAmount?: number; minRaise?: number } => {
+    const bettingPhases = ['preflop', 'flop', 'turn', 'river'];
+    if (!bettingPhases.includes(gamePhase)) {
+      return { valid: false, reason: 'Cannot raise outside of betting rounds' };
+    }
+
+    if (player.hasFolded) {
+      return { valid: false, reason: 'Player has already folded' };
+    }
+
+    // Validate raise amount input
+    const raiseAmount = parseInt(raiseAmountStr);
+    if (isNaN(raiseAmount) || raiseAmount <= 0) {
+      return { valid: false, reason: 'Invalid raise amount. Must be a positive number' };
+    }
+
+    // Calculate minimum raise (must at least match current bet plus raise amount)
+    const callAmount = Math.max(0, currentBet - player.currentBet);
+    const minRaise = callAmount + raiseAmount;
+
+    if (minRaise > player.chips) {
+      return { valid: false, reason: `Insufficient chips. Need at least $${minRaise} to raise, but only have $${player.chips}` };
+    }
+
+    // Additional validation: raise shouldn't be too small compared to current bet
+    const minRaiseAmount = Math.max(1, Math.floor(currentBet * 0.5)); // At least half the current bet or $1 minimum
+    if (raiseAmount < minRaiseAmount) {
+      return { valid: false, reason: `Raise amount too small. Minimum raise is $${minRaiseAmount}` };
+    }
+
+    return { valid: true, totalRaiseAmount: minRaise, minRaise: raiseAmount };
+  };
+
   const handleBettingAction = (action: 'fold' | 'call' | 'raise') => {
     const currentPlayer = players[currentPlayerIndex];
 
-    if (!currentPlayer || !currentPlayer.isHuman) return;
+    // Basic validation - only human player can trigger actions and only when it's their turn
+    if (!currentPlayer || !currentPlayer.isHuman) {
+      console.warn('Invalid action: Only human player can perform actions');
+      return;
+    }
 
+    // Ensure it's actually the human player's turn
+    if (currentPlayerIndex < 0 || currentPlayerIndex >= players.length) {
+      console.warn('Invalid action: No active player turn');
+      return;
+    }
+
+    // Ensure the player hasn't already acted this round (additional safety check)
+    if (currentPlayer.hasActedThisRound) {
+      console.warn('Invalid action: Player has already acted this round');
+      return;
+    }
+
+    // Action-specific validation
+    let validationResult;
+    switch (action) {
+      case 'fold':
+        validationResult = validateFoldAction(currentPlayer, gamePhase);
+        break;
+      case 'call':
+        validationResult = validateCallAction(currentPlayer, currentBet, gamePhase);
+        break;
+      case 'raise':
+        validationResult = validateRaiseAction(currentPlayer, currentBet, raiseAmount, gamePhase);
+        break;
+    }
+
+    // If validation fails, show error and return
+    if (!validationResult?.valid) {
+      console.warn('Invalid action:', validationResult?.reason);
+      alert(validationResult?.reason || 'Invalid action');
+      return;
+    }
+
+    // Execute the validated action
     let newPlayers = [...players];
     let newPot = pot;
     let newCurrentBet = currentBet;
@@ -450,34 +560,27 @@ function App() {
         break;
 
       case 'call':
-        const callAmount = Math.max(0, currentBet - currentPlayer.currentBet);
-        if (currentPlayer.chips >= callAmount) {
-          newPlayers[currentPlayerIndex] = {
-            ...currentPlayer,
-            chips: currentPlayer.chips - callAmount,
-            currentBet: currentPlayer.currentBet + callAmount,
-            hasActedThisRound: true,
-          };
-          newPot += callAmount;
-        }
+        const callAmount = validationResult.callAmount!;
+        newPlayers[currentPlayerIndex] = {
+          ...currentPlayer,
+          chips: currentPlayer.chips - callAmount,
+          currentBet: currentPlayer.currentBet + callAmount,
+          hasActedThisRound: true,
+        };
+        newPot += callAmount;
         break;
 
       case 'raise':
-        const raiseValue = parseInt(raiseAmount);
-        if (isNaN(raiseValue) || raiseValue <= 0) return;
-
-        const totalRaiseAmount = currentBet - currentPlayer.currentBet + raiseValue;
-        if (currentPlayer.chips >= totalRaiseAmount) {
-          newPlayers[currentPlayerIndex] = {
-            ...currentPlayer,
-            chips: currentPlayer.chips - totalRaiseAmount,
-            currentBet: currentPlayer.currentBet + totalRaiseAmount,
-            hasActedThisRound: true,
-          };
-          newPot += totalRaiseAmount;
-          newCurrentBet = currentPlayer.currentBet + totalRaiseAmount;
-          setRaiseAmount(''); // Clear the input
-        }
+        const totalRaiseAmount = validationResult.totalRaiseAmount!;
+        newPlayers[currentPlayerIndex] = {
+          ...currentPlayer,
+          chips: currentPlayer.chips - totalRaiseAmount,
+          currentBet: currentPlayer.currentBet + totalRaiseAmount,
+          hasActedThisRound: true,
+        };
+        newPot += totalRaiseAmount;
+        newCurrentBet = currentPlayer.currentBet + totalRaiseAmount;
+        setRaiseAmount(''); // Clear the input
         break;
     }
 
@@ -908,12 +1011,26 @@ function App() {
           {/* Betting Controls - Only show when it's human player's turn */}
           {players[currentPlayerIndex]?.isHuman && gamePhase !== 'waiting' && (
             <div className="betting-controls">
-              <button className="bet-button fold-button" onClick={() => handleBettingAction('fold')}>
+              <button
+                className="bet-button fold-button"
+                onClick={() => handleBettingAction('fold')}
+                disabled={!validateFoldAction(players[currentPlayerIndex], gamePhase).valid}
+              >
                 Fold
               </button>
-              <button className="bet-button call-button" onClick={() => handleBettingAction('call')}>
-                Call ${Math.max(0, currentBet - players[currentPlayerIndex].currentBet)}
-              </button>
+              {(() => {
+                const callValidation = validateCallAction(players[currentPlayerIndex], currentBet, gamePhase);
+                return (
+                  <button
+                    className="bet-button call-button"
+                    onClick={() => handleBettingAction('call')}
+                    disabled={!callValidation.valid}
+                    title={!callValidation.valid ? callValidation.reason : undefined}
+                  >
+                    Call ${callValidation.callAmount || 0}
+                  </button>
+                );
+              })()}
               <div className="raise-section">
                 <input
                   type="number"
@@ -921,9 +1038,17 @@ function App() {
                   value={raiseAmount}
                   onChange={(e) => setRaiseAmount(e.target.value)}
                   className="raise-input"
-                  min={currentBet - players[currentPlayerIndex].currentBet + 1}
+                  min={Math.max(1, Math.floor(currentBet * 0.5))}
+                  disabled={!validateRaiseAction(players[currentPlayerIndex], currentBet, raiseAmount, gamePhase).valid && raiseAmount === ''}
                 />
-                <button className="bet-button raise-button" onClick={() => handleBettingAction('raise')}>
+                <button
+                  className="bet-button raise-button"
+                  onClick={() => handleBettingAction('raise')}
+                  disabled={!validateRaiseAction(players[currentPlayerIndex], currentBet, raiseAmount, gamePhase).valid}
+                  title={!validateRaiseAction(players[currentPlayerIndex], currentBet, raiseAmount, gamePhase).valid ?
+                    validateRaiseAction(players[currentPlayerIndex], currentBet, raiseAmount, gamePhase).reason :
+                    undefined}
+                >
                   Raise
                 </button>
               </div>
