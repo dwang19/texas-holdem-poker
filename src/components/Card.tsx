@@ -8,17 +8,25 @@ interface CardProps {
   hidden?: boolean;
   size?: 'small' | 'medium' | 'large';
   className?: string;
+  isBurned?: boolean;
+  isDealing?: boolean;
+  isBurnAnimating?: boolean;
 }
 
 const Card: React.FC<CardProps> = ({
   card,
   hidden = false,
   size = 'medium',
-  className = ''
+  className = '',
+  isBurned = false,
+  isDealing = false,
+  isBurnAnimating = false
 }) => {
-  if (!card) {
+  if (!card || isBurned) {
+    const burnClass = isBurned ? 'card--burned' : 'card--empty';
+    const animClass = isBurnAnimating ? 'card--burn-animating' : '';
     return (
-      <div className={`card card--empty card--${size} ${className}`}>
+      <div className={`card ${burnClass} card--${size} ${animClass} ${className}`}>
         <div className="card__back">
           <div className="card__pattern"></div>
         </div>
@@ -39,8 +47,9 @@ const Card: React.FC<CardProps> = ({
   const suitSymbol = getSuitSymbol(card.suit);
   const suitColor = getSuitColor(card.suit);
 
+  const dealingClass = isDealing ? 'card--dealing' : '';
   return (
-    <div className={`card card--${size} ${className}`}>
+    <div className={`card card--${size} ${dealingClass} ${className}`}>
       <div className="card__front">
         <div className="card__corner card__corner--top-left">
           <div className="card__rank" style={{ color: suitColor }}>

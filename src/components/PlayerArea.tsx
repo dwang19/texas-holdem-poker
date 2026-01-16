@@ -7,12 +7,14 @@ interface PlayerAreaProps {
   player: Player;
   isCurrentPlayer?: boolean;
   gamePhase?: 'waiting' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown';
+  holeCardAnimating?: boolean;
 }
 
 const PlayerArea: React.FC<PlayerAreaProps> = ({
   player,
   isCurrentPlayer = false,
-  gamePhase = 'waiting'
+  gamePhase = 'waiting',
+  holeCardAnimating = false
 }) => {
   const getPositionIndicators = () => {
     const indicators = [];
@@ -64,6 +66,7 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
               card={card}
               hidden={(!player.isHuman && gamePhase !== 'showdown') || player.hasFolded}
               size="medium"
+              isDealing={holeCardAnimating}
             />
           ))}
         </div>

@@ -40,6 +40,7 @@ function App() {
   const [deck, setDeck] = useState<Deck>(createDeck());
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [communityCards, setCommunityCards] = useState<CardType[]>([]);
+  const [burnedCards, setBurnedCards] = useState<CardType[]>([]);
   const [pot, setPot] = useState<number>(0);
   const [currentBet, setCurrentBet] = useState<number>(0);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState<number>(0);
@@ -48,6 +49,10 @@ function App() {
   const [aiPersonality, setAiPersonality] = useState<AIPersonality>('balanced');
   const [winner, setWinner] = useState<Player | null>(null);
   const [handComplete, setHandComplete] = useState<boolean>(false);
+  const [isDealing, setIsDealing] = useState<boolean>(false);
+  const [animatingCardIndices, setAnimatingCardIndices] = useState<number[]>([]);
+  const [burnAnimatingIndex, setBurnAnimatingIndex] = useState<number | null>(null);
+  const [holeCardAnimating, setHoleCardAnimating] = useState<boolean>(false);
 
   const determineWinner = () => {
     const activePlayers = players.filter(p => !p.hasFolded);
@@ -110,7 +115,7 @@ function App() {
     // Reset player states for new hand
     const resetPlayers = players.map(player => ({
       ...player,
-      cards: player.isHuman ? humanHand : aiHand,
+      cards: [], // Start with no cards visible
       currentBet: 0,
       hasFolded: false,
     }));
@@ -131,6 +136,7 @@ function App() {
     setDeck(newDeck);
     setPlayers(playersWithBlinds);
     setCommunityCards([]); // Start with no community cards visible
+    setBurnedCards([]); // Reset burned cards for new hand
     setPot(SMALL_BLIND + BIG_BLIND);
     setCurrentBet(BIG_BLIND);
     setCurrentPlayerIndex(0); // Start with human player (after blinds)
@@ -138,6 +144,32 @@ function App() {
     setRaiseAmount('');
     setWinner(null);
     setHandComplete(false);
+
+    // Animate hole card dealing
+    setHoleCardAnimating(true);
+    setTimeout(() => {
+      // Deal first card to each player
+      setPlayers(prevPlayers =>
+        prevPlayers.map(player => ({
+          ...player,
+          cards: player.isHuman ? [humanHand[0]] : [aiHand[0]]
+        }))
+      );
+
+      setTimeout(() => {
+        // Deal second card to each player
+        setPlayers(prevPlayers =>
+          prevPlayers.map(player => ({
+            ...player,
+            cards: player.isHuman ? humanHand : aiHand
+          }))
+        );
+
+        setTimeout(() => {
+          setHoleCardAnimating(false);
+        }, 600); // Animation duration
+      }, 400); // Delay between first and second card
+    }, 200); // Initial delay
   };
 
   // Function to transition to the next game phase
@@ -150,23 +182,33 @@ function App() {
       return;
     }
 
+    setIsDealing(true);
+
     let newCommunityCards = [...communityCards];
+    let newBurnedCards = [...burnedCards];
+    let cardsToDeal: CardType[] = [];
     let newPhase: typeof gamePhase;
 
     switch (gamePhase) {
       case 'preflop':
-        // Deal flop (3 community cards)
-        newCommunityCards = deck.dealCards(3);
+        // Burn 1 card, then deal flop (3 community cards)
+        newBurnedCards.push(deck.dealCard()!);
+        cardsToDeal = deck.dealCards(3);
+        newCommunityCards = cardsToDeal;
         newPhase = 'flop';
         break;
       case 'flop':
-        // Deal turn (1 more community card)
-        newCommunityCards = [...communityCards, ...deck.dealCards(1)];
+        // Burn 1 card, then deal turn (1 more community card)
+        newBurnedCards.push(deck.dealCard()!);
+        cardsToDeal = deck.dealCards(1);
+        newCommunityCards = [...communityCards, ...cardsToDeal];
         newPhase = 'turn';
         break;
       case 'turn':
-        // Deal river (1 more community card)
-        newCommunityCards = [...communityCards, ...deck.dealCards(1)];
+        // Burn 1 card, then deal river (1 more community card)
+        newBurnedCards.push(deck.dealCard()!);
+        cardsToDeal = deck.dealCards(1);
+        newCommunityCards = [...communityCards, ...cardsToDeal];
         newPhase = 'river';
         break;
       case 'river':
@@ -176,27 +218,51 @@ function App() {
         // Determine winner after a short delay to allow UI to update
         setTimeout(() => {
           determineWinner();
+          setIsDealing(false);
         }, 500);
         break;
       default:
+        setIsDealing(false);
         return; // Don't advance from other phases
     }
 
-    setCommunityCards(newCommunityCards);
-    setGamePhase(newPhase);
-    setDeck(deck); // Update deck state after dealing cards
+    if (gamePhase !== 'river') {
+      // First animate the burn card
+      setBurnAnimatingIndex(burnedCards.length);
 
-    // Reset current bets for new betting round
-    const resetBetPlayers = players.map(player => ({
-      ...player,
-      currentBet: 0,
-    }));
-    setPlayers(resetBetPlayers);
-    setCurrentBet(0);
+      setTimeout(() => {
+        setBurnedCards(newBurnedCards);
+        setBurnAnimatingIndex(null);
 
-    // Find first active player for new betting round
-    const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
-    setCurrentPlayerIndex(firstActivePlayerIndex);
+        // Then set community cards and animate them
+        setCommunityCards(newCommunityCards);
+
+        // Animate the cards that were just dealt
+        const startIndex = communityCards.length;
+        const animatingIndices = cardsToDeal.map((_, index) => startIndex + index);
+        setAnimatingCardIndices(animatingIndices);
+
+        // Complete the phase transition after animation
+        setTimeout(() => {
+          setGamePhase(newPhase);
+          setDeck(deck);
+          setAnimatingCardIndices([]);
+          setIsDealing(false);
+
+          // Reset current bets for new betting round
+          const resetBetPlayers = players.map(player => ({
+            ...player,
+            currentBet: 0,
+          }));
+          setPlayers(resetBetPlayers);
+          setCurrentBet(0);
+
+          // Find first active player for new betting round
+          const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
+          setCurrentPlayerIndex(firstActivePlayerIndex);
+        }, 1000); // Wait for card dealing animation
+      }, 800); // Wait for burn animation
+    }
   };
 
   useEffect(() => {
@@ -405,6 +471,30 @@ function App() {
       </header>
 
       <main className="game-container">
+        {/* Burned Cards */}
+        <div className="burned-cards">
+          <h3>Burn Cards</h3>
+          <div className="cards-row">
+            {burnedCards.map((card, index) => (
+              <Card
+                key={`burned-${index}`}
+                card={card}
+                isBurned={true}
+                isBurnAnimating={burnAnimatingIndex === index}
+              />
+            ))}
+            {/* Show placeholder for upcoming burn cards */}
+            {gamePhase === 'preflop' && <Card card={null} isBurned={true} />}
+            {(gamePhase === 'flop' || gamePhase === 'turn') && (
+              <>
+                <Card card={null} isBurned={true} />
+                <Card card={null} isBurned={true} />
+              </>
+            )}
+            {gamePhase === 'turn' && <Card card={null} isBurned={true} />}
+          </div>
+        </div>
+
         {/* Community Cards */}
         <div className="community-cards">
           <h3>Community Cards</h3>
@@ -422,6 +512,7 @@ function App() {
                 <Card
                   key={`community-${index}`}
                   card={shouldShowCard ? card : null}
+                  isDealing={animatingCardIndices.includes(index)}
                 />
               );
             })}
@@ -453,6 +544,7 @@ function App() {
               player={player}
               isCurrentPlayer={index === currentPlayerIndex}
               gamePhase={gamePhase}
+              holeCardAnimating={holeCardAnimating}
             />
           ))}
         </div>

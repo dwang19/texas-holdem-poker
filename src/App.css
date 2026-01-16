@@ -19,6 +19,7 @@
   padding: 20px;
 }
 
+.burned-cards,
 .community-cards,
 .players-section,
 .game-controls {
@@ -30,6 +31,7 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
+.burned-cards h3,
 .community-cards h3,
 .players-section h3 {
   margin-bottom: 15px;
