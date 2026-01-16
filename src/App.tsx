@@ -665,7 +665,9 @@ function App() {
 
           case 'raise':
             const raiseAmount = aiDecision.amount || 0;
-            const totalRaiseAmount = updatedCurrentBet - aiPlayer.currentBet + raiseAmount;
+            const callAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
+            const totalRaiseAmount = callAmount + raiseAmount;
+
             if (aiPlayer.chips >= totalRaiseAmount) {
               updatedPlayers[nextPlayerIndex] = {
                 ...aiPlayer,
@@ -678,16 +680,16 @@ function App() {
               setAiActionDisplay({ action: 'raises', amount: totalRaiseAmount, isThinking: false });
             } else {
               // If can't raise the full amount, just call
-              aiBetAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
-              if (aiPlayer.chips >= aiBetAmount) {
+              const fallbackCallAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
+              if (aiPlayer.chips >= fallbackCallAmount) {
                 updatedPlayers[nextPlayerIndex] = {
                   ...aiPlayer,
-                  chips: Math.max(0, aiPlayer.chips - aiBetAmount),
-                  currentBet: aiPlayer.currentBet + aiBetAmount,
+                  chips: Math.max(0, aiPlayer.chips - fallbackCallAmount),
+                  currentBet: aiPlayer.currentBet + fallbackCallAmount,
                   hasActedThisRound: true,
                 };
-                updatedPot += aiBetAmount;
-                setAiActionDisplay({ action: 'calls', amount: aiBetAmount, isThinking: false });
+                updatedPot += fallbackCallAmount;
+                setAiActionDisplay({ action: 'calls', amount: fallbackCallAmount, isThinking: false });
               }
             }
             break;
