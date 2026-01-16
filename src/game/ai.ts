@@ -118,7 +118,8 @@ export class PokerAI {
     let baseEquity = equityMap[handRank as keyof typeof equityMap] || 0.35;
 
     // Adjust based on phase (later streets have more certainty)
-    const phaseMultipliers = {
+    const phaseMultipliers: Record<GameState['phase'], number> = {
+      'waiting': 0.5,  // No game in progress
       'preflop': 0.6,  // Much uncertainty
       'flop': 0.8,     // Some uncertainty
       'turn': 0.9,     // Less uncertainty

@@ -15,6 +15,7 @@ export interface Player {
   isBigBlind: boolean;
   currentBet: number;
   hasFolded: boolean;
+  hasActedThisRound: boolean; // Track if player has acted in current betting round
 }
 
 export interface GameState {

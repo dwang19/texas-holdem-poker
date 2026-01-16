@@ -35,7 +35,7 @@ The game now features complete Texas Hold'em gameplay:
 - [x] Implement phase transition animations and visual feedback
 - [x] Add card reveal animations for flop/turn/river with proper timing
 - [x] Create hand strength assessment system for AI decision making
-- [ ] Add betting round completion detection (all players acted)
+- [x] Add betting round completion detection (all players acted)
 - [ ] Implement fold/call/raise action validation based on game state
 - [ ] Add game end conditions (player reaches $0, show victory/defeat screen)
 - [ ] Create "Next Round" functionality with chip reset and dealer rotation

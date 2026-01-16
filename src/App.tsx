@@ -32,6 +32,7 @@ function App() {
       isBigBlind: humanDealer,
       currentBet: 0,
       hasFolded: false,
+      hasActedThisRound: false,
     },
     {
       id: 'ai',
@@ -44,6 +45,7 @@ function App() {
       isBigBlind: !humanDealer,
       currentBet: 0,
       hasFolded: false,
+      hasActedThisRound: false,
     },
   ];
 
@@ -171,6 +173,7 @@ function App() {
       cards: [], // Start with no cards visible
       currentBet: 0,
       hasFolded: false,
+      hasActedThisRound: false, // Reset for new betting round
     }));
 
     // Post blinds ($5 small blind, $10 big blind)
@@ -345,6 +348,7 @@ function App() {
                 const resetBetPlayers = players.map(player => ({
                   ...player,
                   currentBet: 0,
+                  hasActedThisRound: false, // Reset for new betting round
                 }));
                 setPlayers(resetBetPlayers);
                 setCurrentBet(0);
@@ -409,8 +413,10 @@ function App() {
     const activePlayers = players.filter(p => !p.hasFolded);
     if (activePlayers.length <= 1) return true;
 
-    // All active players must have acted (currentBet matches their currentBet or they've folded)
-    return activePlayers.every(player => player.currentBet === currentBet);
+    // All active players must have acted in this round AND matched the current bet
+    return activePlayers.every(player =>
+      player.hasActedThisRound && player.currentBet === currentBet
+    );
   };
 
   // Function to get next active player index
@@ -439,6 +445,7 @@ function App() {
         newPlayers[currentPlayerIndex] = {
           ...currentPlayer,
           hasFolded: true,
+          hasActedThisRound: true,
         };
         break;
 
@@ -449,6 +456,7 @@ function App() {
             ...currentPlayer,
             chips: currentPlayer.chips - callAmount,
             currentBet: currentPlayer.currentBet + callAmount,
+            hasActedThisRound: true,
           };
           newPot += callAmount;
         }
@@ -464,6 +472,7 @@ function App() {
             ...currentPlayer,
             chips: currentPlayer.chips - totalRaiseAmount,
             currentBet: currentPlayer.currentBet + totalRaiseAmount,
+            hasActedThisRound: true,
           };
           newPot += totalRaiseAmount;
           newCurrentBet = currentPlayer.currentBet + totalRaiseAmount;
@@ -532,6 +541,7 @@ function App() {
             updatedPlayers[nextPlayerIndex] = {
               ...aiPlayer,
               hasFolded: true,
+              hasActedThisRound: true,
             };
             setAiActionDisplay({ action: 'folds', isThinking: false });
             break;
@@ -543,6 +553,7 @@ function App() {
                 ...aiPlayer,
                 chips: aiPlayer.chips - aiBetAmount,
                 currentBet: aiPlayer.currentBet + aiBetAmount,
+                hasActedThisRound: true,
               };
               updatedPot += aiBetAmount;
               setAiActionDisplay({ action: 'calls', amount: aiBetAmount, isThinking: false });
@@ -557,6 +568,7 @@ function App() {
                 ...aiPlayer,
                 chips: aiPlayer.chips - totalRaiseAmount,
                 currentBet: aiPlayer.currentBet + totalRaiseAmount,
+                hasActedThisRound: true,
               };
               updatedPot += totalRaiseAmount;
               updatedCurrentBet = aiPlayer.currentBet + totalRaiseAmount;
@@ -569,6 +581,7 @@ function App() {
                   ...aiPlayer,
                   chips: aiPlayer.chips - aiBetAmount,
                   currentBet: aiPlayer.currentBet + aiBetAmount,
+                  hasActedThisRound: true,
                 };
                 updatedPot += aiBetAmount;
                 setAiActionDisplay({ action: 'calls', amount: aiBetAmount, isThinking: false });
