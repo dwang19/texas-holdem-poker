@@ -63,6 +63,8 @@ function App() {
   const [animatingCardIndices, setAnimatingCardIndices] = useState<number[]>([]);
   const [burnAnimatingIndex, setBurnAnimatingIndex] = useState<number | null>(null);
   const [holeCardAnimating, setHoleCardAnimating] = useState<boolean>(false);
+  const [aiActionDisplay, setAiActionDisplay] = useState<{action: string, amount?: number, isThinking: boolean} | null>(null);
+  const [phaseAnnouncement, setPhaseAnnouncement] = useState<string | null>(null);
 
   // Start the game with initialization parameters
   const startGame = () => {
@@ -264,6 +266,7 @@ function App() {
     switch (gamePhase) {
       case 'preflop':
         // Burn 1 card, then deal flop (3 community cards)
+        setPhaseAnnouncement("Burning card and dealing the FLOP!");
         newBurnedCards.push(deck.dealCard()!);
         cardsToDeal = deck.dealCards(3);
         newCommunityCards = cardsToDeal;
@@ -271,6 +274,7 @@ function App() {
         break;
       case 'flop':
         // Burn 1 card, then deal turn (1 more community card)
+        setPhaseAnnouncement("Burning card and dealing the TURN!");
         newBurnedCards.push(deck.dealCard()!);
         cardsToDeal = deck.dealCards(1);
         newCommunityCards = [...communityCards, ...cardsToDeal];
@@ -278,6 +282,7 @@ function App() {
         break;
       case 'turn':
         // Burn 1 card, then deal river (1 more community card)
+        setPhaseAnnouncement("Burning card and dealing the RIVER!");
         newBurnedCards.push(deck.dealCard()!);
         cardsToDeal = deck.dealCards(1);
         newCommunityCards = [...communityCards, ...cardsToDeal];
@@ -285,6 +290,7 @@ function App() {
         break;
       case 'river':
         // Move to showdown
+        setPhaseAnnouncement("Showdown! Revealing all hands!");
         newPhase = 'showdown';
         setCurrentPlayerIndex(-1);
         // Determine winner after a short delay to allow UI to update
@@ -332,8 +338,13 @@ function App() {
           // Find first active player for new betting round
           const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
           setCurrentPlayerIndex(firstActivePlayerIndex);
-        }, 1000); // Wait for card dealing animation
-      }, 800); // Wait for burn animation
+
+          // Clear phase announcement after animation
+          setTimeout(() => {
+            setPhaseAnnouncement(null);
+          }, 2500);
+        }, 1200); // Wait for enhanced card dealing animation
+      }, 1000); // Wait for enhanced burn animation
     }
   };
 
@@ -443,6 +454,9 @@ function App() {
 
     // If next player is AI, let AI make decision
     if (nextPlayerIndex !== -1 && !newPlayers[nextPlayerIndex].isHuman && !newPlayers[nextPlayerIndex].hasFolded) {
+      // Show AI thinking animation
+      setAiActionDisplay({ action: '', isThinking: true });
+
       setTimeout(() => {
         // AI makes strategic decision
         const aiPlayer = newPlayers[nextPlayerIndex];
@@ -469,6 +483,7 @@ function App() {
               ...aiPlayer,
               hasFolded: true,
             };
+            setAiActionDisplay({ action: 'folds', isThinking: false });
             break;
 
           case 'call':
@@ -480,6 +495,7 @@ function App() {
                 currentBet: aiPlayer.currentBet + aiBetAmount,
               };
               updatedPot += aiBetAmount;
+              setAiActionDisplay({ action: 'calls', amount: aiBetAmount, isThinking: false });
             }
             break;
 
@@ -494,6 +510,7 @@ function App() {
               };
               updatedPot += totalRaiseAmount;
               updatedCurrentBet = aiPlayer.currentBet + totalRaiseAmount;
+              setAiActionDisplay({ action: 'raises', amount: totalRaiseAmount, isThinking: false });
             } else {
               // If can't raise the full amount, just call
               aiBetAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
@@ -504,6 +521,7 @@ function App() {
                   currentBet: aiPlayer.currentBet + aiBetAmount,
                 };
                 updatedPot += aiBetAmount;
+                setAiActionDisplay({ action: 'calls', amount: aiBetAmount, isThinking: false });
               }
             }
             break;
@@ -512,6 +530,11 @@ function App() {
         setPot(updatedPot);
         setCurrentBet(updatedCurrentBet);
         setPlayers(updatedPlayers);
+
+        // Clear AI action display after a delay
+        setTimeout(() => {
+          setAiActionDisplay(null);
+        }, 2500);
 
         // Check again if betting round is now complete after AI action
         const aiBettingRoundComplete = isBettingRoundComplete(updatedPlayers, updatedCurrentBet);
@@ -682,6 +705,35 @@ function App() {
           </div>
         </div>
 
+        {/* Phase Indicator */}
+        <div className={`phase-indicator phase-${gamePhase.toLowerCase()}`}>
+          <div className="phase-name">
+            {gamePhase === 'waiting' && 'Waiting to Start'}
+            {gamePhase === 'preflop' && 'Preflop'}
+            {gamePhase === 'flop' && 'Flop'}
+            {gamePhase === 'turn' && 'Turn'}
+            {gamePhase === 'river' && 'River'}
+            {gamePhase === 'showdown' && 'Showdown'}
+          </div>
+          <div className="phase-description">
+            {gamePhase === 'preflop' && 'Betting round - Hole cards dealt'}
+            {gamePhase === 'flop' && '3 community cards revealed'}
+            {gamePhase === 'turn' && '4th community card revealed'}
+            {gamePhase === 'river' && '5th community card revealed'}
+            {gamePhase === 'showdown' && 'Hands revealed - Determining winner'}
+          </div>
+        </div>
+
+        {/* Phase Announcement */}
+        {phaseAnnouncement && (
+          <div className="phase-announcement">
+            <div className="announcement-content">
+              <div className="announcement-icon">🎯</div>
+              <div className="announcement-text">{phaseAnnouncement}</div>
+            </div>
+          </div>
+        )}
+
         {/* Community Cards */}
         <div className="community-cards">
           <h3>Community Cards</h3>
@@ -735,6 +787,32 @@ function App() {
             />
           ))}
         </div>
+
+        {/* AI Action Display */}
+        {aiActionDisplay && (
+          <div className="ai-action-display">
+            <div className="ai-action-content">
+              <div className="ai-avatar">🤖</div>
+              <div className="ai-action-text">
+                {aiActionDisplay.isThinking ? (
+                  <>
+                    <div className="thinking-text">AI is thinking...</div>
+                    <div className="thinking-dots">
+                      <span>.</span><span>.</span><span>.</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="action-text">
+                    AI {aiActionDisplay.action}
+                    {aiActionDisplay.amount && aiActionDisplay.amount > 0 && (
+                      <span className="action-amount"> ${aiActionDisplay.amount}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Game Controls */}
         <div className="game-controls">
