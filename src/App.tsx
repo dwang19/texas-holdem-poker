@@ -636,10 +636,8 @@ function App() {
 
     if (bettingRoundComplete) {
       // Advance to next phase
-      setTimeout(() => {
-        console.log('DEBUG: About to call advanceGamePhase, current players:', players.map(p => ({ name: p.name, chips: p.chips })));
-        advanceGamePhase();
-      }, 1000);
+      console.log('DEBUG: About to call advanceGamePhase, updated players:', newPlayers.map(p => ({ name: p.name, chips: p.chips })));
+      advanceGamePhase();
       return;
     }
 
