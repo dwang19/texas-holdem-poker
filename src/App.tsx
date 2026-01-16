@@ -1039,7 +1039,7 @@ function App() {
                   onChange={(e) => setRaiseAmount(e.target.value)}
                   className="raise-input"
                   min={Math.max(1, Math.floor(currentBet * 0.5))}
-                  disabled={!validateRaiseAction(players[currentPlayerIndex], currentBet, raiseAmount, gamePhase).valid && raiseAmount === ''}
+                  disabled={raiseAmount !== '' && !validateRaiseAction(players[currentPlayerIndex], currentBet, raiseAmount, gamePhase).valid}
                 />
                 <button
                   className="bet-button raise-button"
