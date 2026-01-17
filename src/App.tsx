@@ -61,6 +61,10 @@ function App() {
   const [aiPersonality, setAiPersonality] = useState<AIPersonality>('balanced');
   const [winner, setWinner] = useState<Player | null>(null);
   const [handComplete, setHandComplete] = useState<boolean>(false);
+  const [showdownData, setShowdownData] = useState<{
+    hands: { player: Player; pokerHand: PokerHand; isWinner: boolean }[];
+    communityCardsUsed: CardType[];
+  } | null>(null);
   const [isDealing, setIsDealing] = useState<boolean>(false);
   const [animatingCardIndices, setAnimatingCardIndices] = useState<number[]>([]);
   const [burnAnimatingIndex, setBurnAnimatingIndex] = useState<number | null>(null);
@@ -110,6 +114,8 @@ function App() {
 
     let updatedPlayers = [...players];
     let winningPlayer: Player;
+    let showdownHands: { player: Player; pokerHand: PokerHand; isWinner: boolean }[] = [];
+    let communityCardsUsed: CardType[] = [];
 
     if (activePlayers.length === 1) {
       // Only one player left, they win by default
@@ -118,6 +124,17 @@ function App() {
         player.id === winningPlayer.id
           ? { ...player, chips: player.chips + pot }
           : player
+      );
+
+      // For showdown display, still evaluate the hand
+      const playerHand = evaluateHand(winningPlayer.cards, communityCards);
+      showdownHands = [{
+        player: winningPlayer,
+        pokerHand: playerHand,
+        isWinner: true
+      }];
+      communityCardsUsed = playerHand.cards.filter(card =>
+        communityCards.some(commCard => commCard.rank === card.rank && commCard.suit === card.suit)
       );
     } else {
       // Multiple players still active, evaluate hands
@@ -143,7 +160,25 @@ function App() {
           ? { ...player, chips: player.chips + pot }
           : player
       );
+
+      // Prepare showdown data for all active players
+      showdownHands = playerHands.map((ph, index) => ({
+        player: ph.player,
+        pokerHand: ph.hand,
+        isWinner: index === bestHandIndex
+      }));
+
+      // Get community cards used in the winning hand
+      communityCardsUsed = playerHands[bestHandIndex].hand.cards.filter(card =>
+        communityCards.some(commCard => commCard.rank === card.rank && commCard.suit === card.suit)
+      );
     }
+
+    // Set showdown data for display
+    setShowdownData({
+      hands: showdownHands,
+      communityCardsUsed
+    });
 
     setPlayers(updatedPlayers);
     setWinner(winningPlayer);
@@ -208,6 +243,7 @@ function App() {
     setHandComplete(false);
     setPlayerLastActions({}); // Reset last actions for new hand
     setActingPlayerId(null); // Clear acting player
+    setShowdownData(null); // Clear showdown data
 
     // Animate hole card dealing
     setHoleCardAnimating(true);
@@ -253,6 +289,7 @@ function App() {
     setWinner(null);
     console.log('DEBUG: Setting handComplete to false in startNextRound');
     setHandComplete(false);
+    setShowdownData(null); // Clear showdown data
 
     // Start new hand after a brief delay
     setTimeout(() => {
@@ -1025,6 +1062,78 @@ function App() {
             )}
           </div>
         </div>
+
+        {/* Showdown Display */}
+        {gamePhase === 'showdown' && showdownData && (
+          <div className="showdown-display">
+            <h3>Showdown Results</h3>
+            <div className="showdown-hands">
+              {showdownData.hands.map((handData, index) => (
+                <div key={handData.player.id} className={`showdown-hand ${handData.player.isHuman ? 'human-hand' : 'ai-hand'} ${handData.isWinner ? 'winner' : ''}`}>
+                  <div className="showdown-player-name">
+                    {handData.player.name}
+                    {handData.isWinner && <span className="winner-crown">👑</span>}
+                  </div>
+                  <div className="showdown-hand-description">
+                    {handData.pokerHand.description}
+                  </div>
+                  <div className="showdown-cards">
+                    {handData.pokerHand.cards.map((card, cardIndex) => (
+                      <Card
+                        key={`showdown-${handData.player.id}-${cardIndex}`}
+                        card={card}
+                        isHighlighted={handData.isWinner}
+                        highlightColor={handData.player.isHuman ? 'green' : 'blue'}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Community Cards with Usage Indicators */}
+            <div className="showdown-community-usage">
+              <h4>Community Cards Used</h4>
+              <div className="community-usage-cards">
+                {communityCards.map((card, index) => {
+                  const isUsedByHuman = showdownData.hands.find(h => h.player.isHuman)?.pokerHand.cards.some(
+                    handCard => handCard.rank === card.rank && handCard.suit === card.suit
+                  );
+                  const isUsedByAI = showdownData.hands.find(h => !h.player.isHuman)?.pokerHand.cards.some(
+                    handCard => handCard.rank === card.rank && handCard.suit === card.suit
+                  );
+
+                  return (
+                    <div key={`usage-${index}`} className="community-card-usage">
+                      <Card card={card} />
+                      <div className="usage-indicators">
+                        {isUsedByHuman && <div className="usage-human">Human</div>}
+                        {isUsedByAI && <div className="usage-ai">AI</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Winner Announcement */}
+            {winner && (
+              <div className={`winner-announcement ${winner.isHuman ? 'human-winner' : 'ai-winner'}`}>
+                <h3>
+                  🏆 {winner.name} wins ${pot}! 🏆
+                </h3>
+                <div className="hand-comparison">
+                  {showdownData.hands.map((handData, index) => (
+                    <div key={`comparison-${index}`} className={`hand-result ${handData.player.isHuman ? 'human-text' : 'ai-text'}`}>
+                      {handData.pokerHand.description}
+                      {index < showdownData.hands.length - 1 && <span className="vs-text"> vs </span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Player Areas */}
         <div className="players-section">
