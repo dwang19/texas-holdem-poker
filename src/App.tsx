@@ -67,6 +67,8 @@ function App() {
   const [holeCardAnimating, setHoleCardAnimating] = useState<boolean>(false);
   const [aiActionDisplay, setAiActionDisplay] = useState<{action: string, amount?: number, isThinking: boolean} | null>(null);
   const [phaseAnnouncement, setPhaseAnnouncement] = useState<string | null>(null);
+  const [playerLastActions, setPlayerLastActions] = useState<Record<string, string>>({});
+  const [actingPlayerId, setActingPlayerId] = useState<string | null>(null);
 
   // Start the game with initialization parameters
   const startGame = () => {
@@ -204,6 +206,8 @@ function App() {
     setWinner(null);
     console.log('DEBUG: Setting handComplete to false in dealNewHand');
     setHandComplete(false);
+    setPlayerLastActions({}); // Reset last actions for new hand
+    setActingPlayerId(null); // Clear acting player
 
     // Animate hole card dealing
     setHoleCardAnimating(true);
@@ -232,13 +236,13 @@ function App() {
     }, 200); // Initial delay
   };
 
-  // Start next round with dealer rotation and chip reset
+  // Start next round with dealer rotation (chips persist across hands)
   const startNextRound = () => {
     console.log('DEBUG: startNextRound called, current players chips:', players.map(p => ({ name: p.name, chips: p.chips })));
-    // Rotate dealer/button positions and reset chips to $100 each
+    // Rotate dealer/button positions - chips persist across hands
     const nextRoundPlayers = players.map(player => ({
       ...player,
-      chips: 100, // Reset chips for new round
+      // chips persist - do not reset
       isDealer: !player.isDealer,
       isSmallBlind: !player.isSmallBlind,
       isBigBlind: !player.isBigBlind,
@@ -364,20 +368,23 @@ function App() {
                 setDeck(deck);
                 setIsDealing(false);
 
-                // Reset current bets for new betting round
-                console.log('DEBUG: Flop phase transition - players before reset:', players.map(p => ({ name: p.name, chips: p.chips })));
-                const resetBetPlayers = players.map(player => ({
-                  ...player,
-                  currentBet: 0,
-                  hasActedThisRound: false, // Reset for new betting round
-                }));
-                console.log('DEBUG: Flop phase transition - players after reset:', resetBetPlayers.map(p => ({ name: p.name, chips: p.chips })));
-                setPlayers(resetBetPlayers);
+                // Reset current bets for new betting round using functional update to get latest state
+                setPlayers(prevPlayers => {
+                  console.log('DEBUG: Flop phase transition - players before reset:', prevPlayers.map(p => ({ name: p.name, chips: p.chips })));
+                  const resetBetPlayers = prevPlayers.map(player => ({
+                    ...player,
+                    currentBet: 0,
+                    hasActedThisRound: false, // Reset for new betting round
+                  }));
+                  console.log('DEBUG: Flop phase transition - players after reset:', resetBetPlayers.map(p => ({ name: p.name, chips: p.chips })));
+                  
+                  // Find first active player for new betting round
+                  const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
+                  setCurrentPlayerIndex(firstActivePlayerIndex);
+                  
+                  return resetBetPlayers;
+                });
                 setCurrentBet(0);
-
-                // Find first active player for new betting round
-                const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
-                setCurrentPlayerIndex(firstActivePlayerIndex);
 
                 // Clear phase announcement after animation
                 setTimeout(() => {
@@ -402,20 +409,23 @@ function App() {
             setAnimatingCardIndices([]);
             setIsDealing(false);
 
-            // Reset current bets for new betting round
-            console.log('DEBUG: Phase transition - players before reset:', players.map(p => ({ name: p.name, chips: p.chips })));
-            const resetBetPlayers = players.map(player => ({
-              ...player,
-              currentBet: 0,
-              hasActedThisRound: false, // Reset for new betting round
-            }));
-            console.log('DEBUG: Phase transition - players after reset:', resetBetPlayers.map(p => ({ name: p.name, chips: p.chips })));
-            setPlayers(resetBetPlayers);
+            // Reset current bets for new betting round using functional update to get latest state
+            setPlayers(prevPlayers => {
+              console.log('DEBUG: Phase transition - players before reset:', prevPlayers.map(p => ({ name: p.name, chips: p.chips })));
+              const resetBetPlayers = prevPlayers.map(player => ({
+                ...player,
+                currentBet: 0,
+                hasActedThisRound: false, // Reset for new betting round
+              }));
+              console.log('DEBUG: Phase transition - players after reset:', resetBetPlayers.map(p => ({ name: p.name, chips: p.chips })));
+              
+              // Find first active player for new betting round
+              const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
+              setCurrentPlayerIndex(firstActivePlayerIndex);
+              
+              return resetBetPlayers;
+            });
             setCurrentBet(0);
-
-            // Find first active player for new betting round
-            const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
-            setCurrentPlayerIndex(firstActivePlayerIndex);
 
             // Clear phase announcement after animation
             setTimeout(() => {
@@ -525,9 +535,13 @@ function App() {
   const handleBettingAction = (action: 'fold' | 'call' | 'raise') => {
     const currentPlayer = players[currentPlayerIndex];
 
+    // Set acting player indicator
+    setActingPlayerId(currentPlayer.id);
+
     // Basic validation - only human player can trigger actions and only when it's their turn
     if (!currentPlayer || !currentPlayer.isHuman) {
       console.warn('Invalid action: Only human player can perform actions');
+      setActingPlayerId(null);
       return;
     }
 
@@ -570,6 +584,8 @@ function App() {
     let newPot = pot;
     let newCurrentBet = currentBet;
 
+    // Track the action being taken
+    let actionText = '';
     switch (action) {
       case 'fold':
         newPlayers[currentPlayerIndex] = {
@@ -577,6 +593,7 @@ function App() {
           hasFolded: true,
           hasActedThisRound: true,
         };
+        actionText = 'Fold';
         break;
 
       case 'call':
@@ -589,6 +606,7 @@ function App() {
           hasActedThisRound: true,
         };
         newPot += callAmount;
+        actionText = `Call $${callAmount}`;
         break;
 
       case 'raise':
@@ -608,13 +626,25 @@ function App() {
         newPot += totalRaiseAmount;
         newCurrentBet = currentPlayer.currentBet + totalRaiseAmount;
         setRaiseAmount(''); // Clear the input
+        actionText = `Raise $${totalRaiseAmount}`;
         break;
     }
+
+    // Update last action for this player
+    setPlayerLastActions(prev => ({
+      ...prev,
+      [currentPlayer.id]: actionText
+    }));
 
     console.log('DEBUG: Betting action - players after:', newPlayers.map(p => ({ name: p.name, chips: p.chips, currentBet: p.currentBet })));
     setPlayers(newPlayers);
     setPot(newPot);
     setCurrentBet(newCurrentBet);
+
+    // Clear acting player indicator after a short delay
+    setTimeout(() => {
+      setActingPlayerId(null);
+    }, 500);
 
     // Check if betting round is complete
     const bettingRoundComplete = isBettingRoundComplete(newPlayers, newCurrentBet);
@@ -647,6 +677,9 @@ function App() {
 
     // If next player is AI, let AI make decision
     if (nextPlayerIndex !== -1 && !newPlayers[nextPlayerIndex].isHuman && !newPlayers[nextPlayerIndex].hasFolded) {
+      // Set acting player indicator
+      setActingPlayerId(newPlayers[nextPlayerIndex].id);
+
       // Show AI thinking animation
       setAiActionDisplay({ action: '', isThinking: true });
 
@@ -670,6 +703,9 @@ function App() {
         let updatedPot = newPot;
         let updatedCurrentBet = newCurrentBet;
 
+        // Track AI action text
+        let aiActionText = '';
+
         switch (aiDecision.action) {
           case 'fold':
             updatedPlayers[nextPlayerIndex] = {
@@ -678,6 +714,7 @@ function App() {
               hasActedThisRound: true,
             };
             setAiActionDisplay({ action: 'folds', isThinking: false });
+            aiActionText = 'Fold';
             break;
 
           case 'call':
@@ -691,6 +728,7 @@ function App() {
               };
               updatedPot += aiBetAmount;
               setAiActionDisplay({ action: 'calls', amount: aiBetAmount, isThinking: false });
+              aiActionText = `Call $${aiBetAmount}`;
             }
             break;
 
@@ -714,6 +752,7 @@ function App() {
               updatedPot += totalRaiseAmount;
               updatedCurrentBet = aiPlayer.currentBet + totalRaiseAmount;
               setAiActionDisplay({ action: 'raises', amount: totalRaiseAmount, isThinking: false });
+              aiActionText = `Raise $${totalRaiseAmount}`;
             } else {
               // If can't raise the full amount, just call
               const fallbackCallAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
@@ -726,18 +765,26 @@ function App() {
                 };
                 updatedPot += fallbackCallAmount;
                 setAiActionDisplay({ action: 'calls', amount: fallbackCallAmount, isThinking: false });
+                aiActionText = `Call $${fallbackCallAmount}`;
               }
             }
             break;
         }
 
+        // Update last action for AI player
+        setPlayerLastActions(prev => ({
+          ...prev,
+          [aiPlayer.id]: aiActionText
+        }));
+
         setPot(updatedPot);
         setCurrentBet(updatedCurrentBet);
         setPlayers(updatedPlayers);
 
-        // Clear AI action display after a delay
+        // Clear AI action display and acting player indicator after a delay
         setTimeout(() => {
           setAiActionDisplay(null);
+          setActingPlayerId(null);
         }, 2500);
 
         // Check again if betting round is now complete after AI action
@@ -988,6 +1035,8 @@ function App() {
               isCurrentPlayer={index === currentPlayerIndex}
               gamePhase={gamePhase}
               holeCardAnimating={holeCardAnimating}
+              isActing={actingPlayerId === player.id}
+              lastAction={playerLastActions[player.id]}
             />
           ))}
         </div>

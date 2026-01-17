@@ -8,13 +8,17 @@ interface PlayerAreaProps {
   isCurrentPlayer?: boolean;
   gamePhase?: 'waiting' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown';
   holeCardAnimating?: boolean;
+  isActing?: boolean;
+  lastAction?: string;
 }
 
 const PlayerArea: React.FC<PlayerAreaProps> = ({
   player,
   isCurrentPlayer = false,
   gamePhase = 'waiting',
-  holeCardAnimating = false
+  holeCardAnimating = false,
+  isActing = false,
+  lastAction = ''
 }) => {
   const getPositionIndicators = () => {
     const indicators = [];
@@ -27,13 +31,28 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
   const positionIndicators = getPositionIndicators();
 
   return (
-    <div className={`player-area ${player.hasFolded ? 'folded' : ''} ${isCurrentPlayer ? 'current-player' : ''}`}>
+    <div className={`player-area ${player.hasFolded ? 'folded' : ''} ${isCurrentPlayer ? 'current-player' : ''} ${isActing ? 'acting-player' : ''}`}>
+      {/* Turn Indicator Badge */}
+      {isCurrentPlayer && !player.hasFolded && (
+        <div className="turn-indicator">
+          <div className="turn-arrow">⬇</div>
+          <div className="turn-text">TURN</div>
+        </div>
+      )}
+
+      {/* Action Indicator */}
+      {isActing && (
+        <div className="action-indicator">
+          <div className="action-icon">⚡</div>
+          <div className="action-text">ACTING</div>
+        </div>
+      )}
+
       <div className="player-header">
         <div className="player-name-section">
           <h3 className="player-name">
             {player.name}
             {player.hasFolded && <span className="folded-text"> (FOLDED)</span>}
-            {isCurrentPlayer && !player.hasFolded && <span className="current-indicator"> ← YOUR TURN</span>}
           </h3>
           {positionIndicators.length > 0 && (
             <div className="position-indicators">
@@ -54,6 +73,12 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
           <div className="current-bet">
             <span className="bet-label">Bet:</span>
             <span className="bet-amount">${player.currentBet}</span>
+          </div>
+        )}
+        {lastAction && (
+          <div className="last-action">
+            <span className="action-label">Last:</span>
+            <span className="action-value">{lastAction}</span>
           </div>
         )}
       </div>

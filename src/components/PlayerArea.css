@@ -11,10 +11,100 @@
   position: relative;
 }
 
+/* Turn Indicator Badge */
+.turn-indicator {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ffa726 0%, #ff6b35 100%);
+  color: white;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  box-shadow: 0 4px 15px rgba(255, 167, 38, 0.4);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  animation: turnIndicatorBounce 1.5s infinite;
+}
+
+.turn-arrow {
+  font-size: 14px;
+  animation: turnArrowPulse 1s infinite;
+}
+
+.turn-text {
+  letter-spacing: 1px;
+}
+
+@keyframes turnIndicatorBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-3px); }
+}
+
+@keyframes turnArrowPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Action Indicator */
+.action-indicator {
+  position: absolute;
+  top: -15px;
+  right: 15px;
+  background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  animation: actionIndicatorFlash 0.8s infinite;
+}
+
+.action-icon {
+  font-size: 12px;
+}
+
+.action-text {
+  letter-spacing: 0.5px;
+}
+
+@keyframes actionIndicatorFlash {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
 .player-area.current-player {
   border-color: #ffa726;
   box-shadow: 0 8px 32px rgba(255, 167, 38, 0.3);
   transform: translateY(-5px);
+  animation: currentPlayerGlow 2s infinite alternate;
+}
+
+.player-area.acting-player {
+  border-color: #ff4757;
+  box-shadow: 0 8px 32px rgba(255, 71, 87, 0.4);
+  animation: actingPlayerPulse 1s infinite;
+}
+
+@keyframes currentPlayerGlow {
+  0% { box-shadow: 0 8px 32px rgba(255, 167, 38, 0.3); }
+  100% { box-shadow: 0 8px 32px rgba(255, 167, 38, 0.6); }
+}
+
+@keyframes actingPlayerPulse {
+  0%, 100% { border-color: #ff4757; }
+  50% { border-color: #ff6b6b; }
 }
 
 .player-area.folded {
@@ -126,6 +216,28 @@
 .bet-amount {
   color: #fff;
   font-weight: bold;
+}
+
+.last-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(46, 204, 113, 0.2);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.action-label {
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+.action-value {
+  color: #fff;
+  font-weight: bold;
+  text-transform: uppercase;
 }
 
 .player-cards {
