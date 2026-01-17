@@ -223,6 +223,67 @@
   }
 }
 
+/* Card Edge Highlighting Styles */
+.card--edge-highlight-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 8px 8px 0 0;
+  z-index: 5;
+}
+
+.card--edge-highlight-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 0 0 8px 8px;
+  z-index: 5;
+}
+
+.card--edge-highlight-both::before,
+.card--edge-highlight-both::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  z-index: 5;
+}
+
+.card--edge-highlight-both::before {
+  top: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.card--edge-highlight-both::after {
+  bottom: 0;
+  border-radius: 0 0 8px 8px;
+}
+
+.card--edge-green::before,
+.card--edge-green::after {
+  background: linear-gradient(90deg,
+    rgba(34, 197, 94, 0.8) 0%,
+    rgba(34, 197, 94, 0.6) 50%,
+    rgba(34, 197, 94, 0.8) 100%);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.card--edge-blue::before,
+.card--edge-blue::after {
+  background: linear-gradient(90deg,
+    rgba(59, 130, 246, 0.8) 0%,
+    rgba(59, 130, 246, 0.6) 50%,
+    rgba(59, 130, 246, 0.8) 100%);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .card--large {

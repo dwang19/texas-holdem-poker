@@ -1091,9 +1091,9 @@ function App() {
               ))}
             </div>
 
-            {/* Community Cards with Usage Indicators */}
+            {/* Enhanced Community Cards with Edge Highlighting */}
             <div className="showdown-community-usage">
-              <h4>Community Cards Used</h4>
+              <h4>Community Cards Used in Winning Hands</h4>
               <div className="community-usage-cards">
                 {communityCards.map((card, index) => {
                   const isUsedByHuman = showdownData.hands.find(h => h.player.isHuman)?.pokerHand.cards.some(
@@ -1103,9 +1103,28 @@ function App() {
                     handCard => handCard.rank === card.rank && handCard.suit === card.suit
                   );
 
+                  // Determine edge highlighting
+                  let edgeHighlight: 'top' | 'bottom' | 'both' | undefined;
+                  let edgeHighlightColor: 'green' | 'blue' | undefined;
+
+                  if (isUsedByHuman && isUsedByAI) {
+                    edgeHighlight = 'both';
+                    edgeHighlightColor = 'green'; // Show green on bottom, blue on top
+                  } else if (isUsedByHuman) {
+                    edgeHighlight = 'bottom';
+                    edgeHighlightColor = 'green';
+                  } else if (isUsedByAI) {
+                    edgeHighlight = 'top';
+                    edgeHighlightColor = 'blue';
+                  }
+
                   return (
                     <div key={`usage-${index}`} className="community-card-usage">
-                      <Card card={card} />
+                      <Card
+                        card={card}
+                        edgeHighlight={edgeHighlight}
+                        edgeHighlightColor={edgeHighlightColor}
+                      />
                       <div className="usage-indicators">
                         {isUsedByHuman && <div className="usage-human">Human</div>}
                         {isUsedByAI && <div className="usage-ai">AI</div>}
@@ -1116,19 +1135,35 @@ function App() {
               </div>
             </div>
 
-            {/* Winner Announcement */}
+            {/* Enhanced Winner Announcement with Color-Coded Hand Comparison */}
             {winner && (
               <div className={`winner-announcement ${winner.isHuman ? 'human-winner' : 'ai-winner'}`}>
                 <h3>
                   🏆 {winner.name} wins ${pot}! 🏆
                 </h3>
                 <div className="hand-comparison">
-                  {showdownData.hands.map((handData, index) => (
-                    <div key={`comparison-${index}`} className={`hand-result ${handData.player.isHuman ? 'human-text' : 'ai-text'}`}>
-                      {handData.pokerHand.description}
-                      {index < showdownData.hands.length - 1 && <span className="vs-text"> vs </span>}
-                    </div>
-                  ))}
+                  {(() => {
+                    const winnerHand = showdownData.hands.find(h => h.isWinner);
+                    const loserHand = showdownData.hands.find(h => !h.isWinner);
+
+                    if (winnerHand && loserHand) {
+                      return (
+                        <>
+                          <div className={`hand-result winning-hand ${winnerHand.player.isHuman ? 'human-text' : 'ai-text'}`}>
+                            {winnerHand.pokerHand.description}
+                          </div>
+                          <span className="vs-text">beats</span>
+                          <div className={`hand-result losing-hand ${loserHand.player.isHuman ? 'human-text' : 'ai-text'}`}>
+                            {loserHand.pokerHand.description}
+                          </div>
+                        </>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+                <div className="winning-hand-summary">
+                  {showdownData.hands.find(h => h.isWinner)?.pokerHand.description} wins!
                 </div>
               </div>
             )}

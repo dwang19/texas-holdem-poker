@@ -13,6 +13,8 @@ interface CardProps {
   isBurnAnimating?: boolean;
   isHighlighted?: boolean;
   highlightColor?: 'green' | 'blue';
+  edgeHighlight?: 'top' | 'bottom' | 'both';
+  edgeHighlightColor?: 'green' | 'blue';
 }
 
 const Card: React.FC<CardProps> = ({
@@ -24,7 +26,9 @@ const Card: React.FC<CardProps> = ({
   isDealing = false,
   isBurnAnimating = false,
   isHighlighted = false,
-  highlightColor = 'green'
+  highlightColor = 'green',
+  edgeHighlight,
+  edgeHighlightColor = 'green'
 }) => {
   if (!card || isBurned) {
     const burnClass = isBurned ? 'card--burned' : 'card--empty';
@@ -53,8 +57,9 @@ const Card: React.FC<CardProps> = ({
 
   const dealingClass = isDealing ? 'card--dealing' : '';
   const highlightClass = isHighlighted ? `card--highlighted card--highlight-${highlightColor}` : '';
+  const edgeHighlightClass = edgeHighlight ? `card--edge-highlight-${edgeHighlight} card--edge-${edgeHighlightColor}` : '';
   return (
-    <div className={`card card--${size} ${dealingClass} ${highlightClass} ${className}`}>
+    <div className={`card card--${size} ${dealingClass} ${highlightClass} ${edgeHighlightClass} ${className}`}>
       <div className="card__front">
         <div className="card__corner card__corner--top-left">
           <div className="card__rank" style={{ color: suitColor }}>

@@ -957,6 +957,43 @@
   color: #666;
   font-weight: normal;
   margin: 0 8px;
+  font-style: italic;
+}
+
+.winning-hand-summary {
+  margin-top: 15px;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 8px;
+  animation: winningHandGlow 2s ease-in-out infinite alternate;
+}
+
+.winning-hand-summary {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 193, 7, 0.1) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  color: #d4af37;
+}
+
+/* Enhanced winning/losing hand styles */
+.winning-hand {
+  font-size: 16px;
+  border: 2px solid currentColor;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.losing-hand {
+  opacity: 0.8;
+  font-size: 14px;
+}
+
+@keyframes winningHandGlow {
+  0% {
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+  }
 }
 
 /* Animations */
