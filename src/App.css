@@ -26,64 +26,76 @@
   gap: 20px;
 }
 
-/* Main Game Layout: Left Side (Players & Community) + Right Side (Cards & Info) */
+/* Main Game Layout */
 .main-game-layout {
-  display: flex;
-  gap: 30px;
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-
-/* Left Side: Vertical Stack - AI Player, Cards Row, Human Player */
-.left-side-section {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  flex: 1;
-  min-width: 400px;
-  max-width: 900px;
+  position: relative;
 }
 
-/* Cards Row Container: Community Cards, Deck, and Burn Cards in Same Row */
-.cards-row-container {
+/* Center Section: Top Row (Game Info + AI Player), Cards Row, Human Player */
+.center-section {
   display: flex;
+  flex-direction: column;
   gap: 20px;
-  justify-content: flex-start;
-  align-items: stretch;
-  flex-wrap: nowrap;
   width: 100%;
+  align-items: center;
 }
 
-/* AI Player Section - Top of Left Side */
-.ai-player-section {
+/* Top Row Container: Game Info and AI Player - Side by Side, Vertically Aligned */
+.top-row-container {
   display: flex;
   justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 20px;
+  position: relative;
+  min-height: 60px; /* Ensure space for content */
 }
 
-/* Human Player Section - Bottom of Left Side */
+/* Cards Row Container: Pot, Community Cards, Deck, and Burn Cards in Same Row */
+.cards-row-container {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  width: 100%;
+  position: relative;
+}
+
+
+
+/* AI Player Section - In Top Row Container, Centered to Match Human Player */
+.top-row-container .ai-player-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin-bottom: 0;
+  /* Centered naturally by parent's justify-content: center, matching Human Player */
+  flex: 0 1 auto;
+}
+
+/* Human Player Section - Aligned horizontally with AI Player */
 .human-player-section {
   display: flex;
   justify-content: center;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  margin-top: 20px;
 }
 
-/* Right Side: Top Row (Pot & Game Info) */
-.right-side-section {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  flex: 1;
-  min-width: 400px;
-  max-width: 600px;
+/* Align player sections with center of community cards */
+/* Calculate offset: pot-column (200px) + gap (15px) + half of community-cards (250px) */
+.ai-player-section,
+.human-player-section {
+  /* The player sections will naturally align with the center since both use justify-content: center */
+  /* The community cards box is centered in the flex container, so players align naturally */
 }
 
-/* Top Row: Pot Display and Game Info */
-.top-info-row {
-  display: flex;
-  gap: 20px;
-  justify-content: flex-start;
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
 
 
 /* Bottom Row: Player Actions and Game Log */
@@ -96,8 +108,8 @@
   margin-top: 20px;
 }
 
-/* Game Info Box - Separate Box */
-.game-info-box {
+/* Game Info Box - In Top Row Container, Positioned to Left */
+.top-row-container .game-info-box {
   padding: 15px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
@@ -105,8 +117,14 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-width: 200px;
+  max-width: 300px;
+  box-sizing: border-box;
+  /* Positioned absolutely to left, doesn't affect AI Player centering */
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .game-info-box h3 {
@@ -212,8 +230,9 @@
 }
 
 /* Pot Display - In Top Info Row */
+/* Pot Display - In Cards Row Container, Left of Community Cards */
 .pot-display {
-  padding: 20px;
+  padding: 15px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -221,13 +240,16 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   min-width: 200px;
-  flex: 1;
+  height: 210px;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 /* Deck Visual - In Cards Row Container */
 .deck-visual {
-  padding: 20px;
+  padding: 15px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -237,9 +259,9 @@
   align-items: center;
   justify-content: space-between;
   min-width: 150px;
-  min-height: 200px;
-  height: 100%;
+  height: 210px;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .deck-visual h3 {
@@ -311,17 +333,18 @@
 
 /* Community Cards - In Cards Row Container */
 .community-cards {
-  padding: 20px;
+  padding: 15px 10px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   flex: 2;
-  min-width: 400px;
-  min-height: 200px;
-  height: 100%;
+  min-width: 500px;
+  height: 210px;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .community-cards h3 {
@@ -333,26 +356,28 @@
 }
 
 .community-cards .cards-row {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 120px;
+  flex-wrap: nowrap;
+  overflow: visible;
+  height: auto;
+  flex-shrink: 0;
 }
 
 /* Burned Cards - In Cards Row Container - Fixed Dimensions */
 .burned-cards {
-  padding: 20px;
+  padding: 15px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   min-width: 250px;
-  min-height: 200px;
-  height: 100%;
+  height: 210px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .burned-cards h3 {
@@ -436,23 +461,36 @@
     flex-direction: column;
   }
   
-  .left-side-section,
-  .right-side-section {
-    max-width: 100%;
-    min-width: unset;
+  .top-row-container {
+    flex-direction: column;
+    align-items: center;
   }
   
-  .top-info-row,
-  .cards-row-container,
+  .top-row-container .game-info-box,
+  .top-row-container .ai-player-section {
+    max-width: 100%;
+    min-width: unset;
+    width: 100%;
+  }
+  
+  .cards-row-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .cards-row-container .pot-display,
+  .cards-row-container .community-cards,
+  .cards-row-container .deck-visual,
+  .cards-row-container .burned-cards {
+    max-width: 100%;
+    min-width: unset;
+    width: 100%;
+  }
+  
   .bottom-actions-section {
     flex-direction: column;
   }
   
-  .top-info-row .pot-display,
-  .top-info-row .game-info-box,
-  .cards-row-container .community-cards,
-  .cards-row-container .deck-visual,
-  .cards-row-container .burned-cards,
   .bottom-actions-section .action-buttons-section,
   .bottom-actions-section .game-log-box {
     max-width: 100%;

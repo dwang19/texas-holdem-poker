@@ -977,30 +977,64 @@ function App() {
       </header>
 
       <main className="game-container">
-        {/* Main Layout: Left Side (Players & Community) + Right Side (Cards & Info) */}
+        {/* Main Layout */}
         <div className="main-game-layout">
-          {/* Left Side: Vertical Stack - AI Player, Cards Row, Human Player */}
-          <div className="left-side-section">
-            {/* AI Player - Top */}
-            <div className="ai-player-section">
-              {players.filter(p => !p.isHuman).map((player, index) => {
-                const playerIndex = players.findIndex(p => p.id === player.id);
-                return (
-                  <PlayerArea
-                    key={player.id}
-                    player={player}
-                    isCurrentPlayer={playerIndex === currentPlayerIndex}
-                    gamePhase={gamePhase}
-                    holeCardAnimating={holeCardAnimating}
-                    isActing={actingPlayerId === player.id}
-                    lastAction={playerLastActions[player.id]}
-                  />
-                );
-              })}
+          {/* Center Section: Game Info + AI Player, Cards Row, Human Player */}
+          <div className="center-section">
+            {/* Top Row: Game Info and AI Player - Side by Side, Vertically Aligned */}
+            <div className="top-row-container">
+              {/* Game Info Box - Left Side */}
+              <div className="game-info-box">
+                <h3>Game Info</h3>
+                <div className="game-info-static">
+                  <div className="info-item">
+                    <span className="info-label">Round:</span>
+                    <span className="info-value">{roundNumber}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Phase:</span>
+                    <span className="info-value">{gamePhase.charAt(0).toUpperCase() + gamePhase.slice(1)}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Current Bet:</span>
+                    <span className="info-value">${currentBet}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Player - Right Side, Vertically Aligned with Game Info */}
+              <div className="ai-player-section">
+                {players.filter(p => !p.isHuman).map((player, index) => {
+                  const playerIndex = players.findIndex(p => p.id === player.id);
+                  return (
+                    <PlayerArea
+                      key={player.id}
+                      player={player}
+                      isCurrentPlayer={playerIndex === currentPlayerIndex}
+                      gamePhase={gamePhase}
+                      holeCardAnimating={holeCardAnimating}
+                      isActing={actingPlayerId === player.id}
+                      lastAction={playerLastActions[player.id]}
+                    />
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Cards Row: Community Cards, Deck, and Burn Cards - All in Same Row */}
+            {/* Cards Row: Pot, Community Cards, Deck, and Burn Cards - All Same Height */}
             <div className="cards-row-container">
+              {/* Pot Display - Left of Community Cards */}
+              <div className="pot-display">
+                <h3>Betting Pot</h3>
+                <div className="pot-amount">${pot}</div>
+                <div className="pot-info">
+                  <div className="pot-info-item">
+                    <span>Total in Play:</span>
+                    <span>${players.reduce((total, player) => total + player.chips, 0) + pot}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Community Cards */}
               <div className="community-cards">
                 <h3>Community Cards</h3>
@@ -1087,43 +1121,6 @@ function App() {
                   />
                 );
               })}
-            </div>
-          </div>
-
-          {/* Right Side: Top Row (Pot & Game Info) */}
-          <div className="right-side-section">
-            {/* Top Row: Pot Display and Game Info */}
-            <div className="top-info-row">
-              {/* Pot Display */}
-              <div className="pot-display">
-                <h3>Betting Pot</h3>
-                <div className="pot-amount">${pot}</div>
-                <div className="pot-info">
-                  <div className="pot-info-item">
-                    <span>Total in Play:</span>
-                    <span>${players.reduce((total, player) => total + player.chips, 0) + pot}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Game Info Box */}
-              <div className="game-info-box">
-                <h3>Game Info</h3>
-                <div className="game-info-static">
-                  <div className="info-item">
-                    <span className="info-label">Round:</span>
-                    <span className="info-value">{roundNumber}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Phase:</span>
-                    <span className="info-value">{gamePhase.charAt(0).toUpperCase() + gamePhase.slice(1)}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Current Bet:</span>
-                    <span className="info-value">${currentBet}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
