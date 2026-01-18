@@ -58,7 +58,7 @@ function App() {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState<number>(0);
   const [gamePhase, setGamePhase] = useState<'waiting' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown'>('waiting');
   const [raiseAmount, setRaiseAmount] = useState<string>('');
-  const [aiPersonality, setAiPersonality] = useState<AIPersonality>('balanced');
+  const [aiPersonality] = useState<AIPersonality>('balanced'); // Hardcoded to balanced
   const [winner, setWinner] = useState<Player | null>(null);
   const [handComplete, setHandComplete] = useState<boolean>(false);
   const [showdownData, setShowdownData] = useState<{
@@ -73,6 +73,7 @@ function App() {
   const [phaseAnnouncement, setPhaseAnnouncement] = useState<string | null>(null);
   const [playerLastActions, setPlayerLastActions] = useState<Record<string, string>>({});
   const [actingPlayerId, setActingPlayerId] = useState<string | null>(null);
+  const [gameLog, setGameLog] = useState<Array<{timestamp: Date, message: string}>>([]);
 
   // Start the game with initialization parameters
   const startGame = () => {
@@ -83,6 +84,7 @@ function App() {
     setRoundNumber(1);
     setGameOver(false);
     setOverallWinner(null);
+    setGameLog([{ timestamp: new Date(), message: `Game started! ${humanPlayerName} vs AI Player` }]);
     // Trigger the first hand deal
     setTimeout(() => {
       dealNewHand();
@@ -184,6 +186,10 @@ function App() {
     setWinner(winningPlayer);
     console.log('DEBUG: Setting handComplete to true in determineWinner');
     setHandComplete(true);
+    
+    // Add to game log
+    const winningHandDesc = showdownHands.find(h => h.isWinner)?.pokerHand.description || 'best hand';
+    setGameLog(prev => [...prev, { timestamp: new Date(), message: `${winningPlayer.name} wins $${pot} with ${winningHandDesc}` }]);
 
     // Check for bust condition (player with $0 chips) - happens in both cases
     const bustedPlayers = updatedPlayers.filter(p => p.chips <= 0);
@@ -198,6 +204,7 @@ function App() {
 
   const dealNewHand = () => {
     console.log('DEBUG: dealNewHand called, current players chips:', players.map(p => ({ name: p.name, chips: p.chips })));
+    setGameLog(prev => [...prev, { timestamp: new Date(), message: `Round ${roundNumber} - New hand dealt` }]);
     const newDeck = createDeck();
 
     // Deal hole cards to players
@@ -330,7 +337,7 @@ function App() {
     switch (gamePhase) {
       case 'preflop':
         // Burn 1 card, then deal flop (3 community cards)
-        setPhaseAnnouncement("Burning card and dealing the FLOP!");
+        setGameLog(prev => [...prev, { timestamp: new Date(), message: 'Flop dealt - 3 community cards revealed' }]);
         newBurnedCards.push(deck.dealCard()!);
         cardsToDeal = deck.dealCards(3);
         newCommunityCards = cardsToDeal;
@@ -338,7 +345,7 @@ function App() {
         break;
       case 'flop':
         // Burn 1 card, then deal turn (1 more community card)
-        setPhaseAnnouncement("Burning card and dealing the TURN!");
+        setGameLog(prev => [...prev, { timestamp: new Date(), message: 'Turn dealt - 4th community card revealed' }]);
         newBurnedCards.push(deck.dealCard()!);
         cardsToDeal = deck.dealCards(1);
         newCommunityCards = [...communityCards, ...cardsToDeal];
@@ -346,7 +353,7 @@ function App() {
         break;
       case 'turn':
         // Burn 1 card, then deal river (1 more community card)
-        setPhaseAnnouncement("Burning card and dealing the RIVER!");
+        setGameLog(prev => [...prev, { timestamp: new Date(), message: 'River dealt - 5th community card revealed' }]);
         newBurnedCards.push(deck.dealCard()!);
         cardsToDeal = deck.dealCards(1);
         newCommunityCards = [...communityCards, ...cardsToDeal];
@@ -354,7 +361,7 @@ function App() {
         break;
       case 'river':
         // Move to showdown
-        setPhaseAnnouncement("Showdown! Revealing all hands!");
+        setGameLog(prev => [...prev, { timestamp: new Date(), message: 'Showdown! Revealing all hands' }]);
         newPhase = 'showdown';
         setCurrentPlayerIndex(-1);
         // Determine winner after a short delay to allow UI to update
@@ -673,6 +680,9 @@ function App() {
       [currentPlayer.id]: actionText
     }));
 
+    // Add to game log
+    setGameLog(prev => [...prev, { timestamp: new Date(), message: `${currentPlayer.name} ${actionText.toLowerCase()}` }]);
+
     console.log('DEBUG: Betting action - players after:', newPlayers.map(p => ({ name: p.name, chips: p.chips, currentBet: p.currentBet })));
     setPlayers(newPlayers);
     setPot(newPot);
@@ -813,6 +823,9 @@ function App() {
           ...prev,
           [aiPlayer.id]: aiActionText
         }));
+
+        // Add to game log
+        setGameLog(prev => [...prev, { timestamp: new Date(), message: `AI Player ${aiActionText.toLowerCase()}` }]);
 
         setPot(updatedPot);
         setCurrentBet(updatedCurrentBet);
@@ -961,105 +974,157 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>Texas Hold'em Poker</h1>
-        <p>A React + TypeScript Poker Game</p>
-        <div className="game-info-bar">
-          <span>Round {roundNumber}</span>
-          <span>{humanPlayerName} vs AI Player</span>
-        </div>
       </header>
 
       <main className="game-container">
-        {/* Burned Cards */}
-        <div className="burned-cards">
-          <h3>Burn Cards</h3>
-          <div className="cards-row">
-            {burnedCards.map((card, index) => (
-              <Card
-                key={`burned-${index}`}
-                card={card}
-                isBurned={true}
-                isBurnAnimating={burnAnimatingIndex === index}
-              />
-            ))}
-            {/* Show placeholder for upcoming burn cards */}
-            {gamePhase === 'preflop' && <Card card={null} isBurned={true} />}
-            {(gamePhase === 'flop' || gamePhase === 'turn') && (
-              <>
-                <Card card={null} isBurned={true} />
-                <Card card={null} isBurned={true} />
-              </>
-            )}
-            {gamePhase === 'turn' && <Card card={null} isBurned={true} />}
-          </div>
-        </div>
+        {/* Main Layout: Left Side (Players & Community) + Right Side (Cards & Info) */}
+        <div className="main-game-layout">
+          {/* Left Side: Vertical Stack - AI Player, Cards Row, Human Player */}
+          <div className="left-side-section">
+            {/* AI Player - Top */}
+            <div className="ai-player-section">
+              {players.filter(p => !p.isHuman).map((player, index) => {
+                const playerIndex = players.findIndex(p => p.id === player.id);
+                return (
+                  <PlayerArea
+                    key={player.id}
+                    player={player}
+                    isCurrentPlayer={playerIndex === currentPlayerIndex}
+                    gamePhase={gamePhase}
+                    holeCardAnimating={holeCardAnimating}
+                    isActing={actingPlayerId === player.id}
+                    lastAction={playerLastActions[player.id]}
+                  />
+                );
+              })}
+            </div>
 
-        {/* Phase Indicator */}
-        <div className={`phase-indicator phase-${gamePhase.toLowerCase()}`}>
-          <div className="phase-name">
-            {gamePhase === 'waiting' && 'Waiting to Start'}
-            {gamePhase === 'preflop' && 'Preflop'}
-            {gamePhase === 'flop' && 'Flop'}
-            {gamePhase === 'turn' && 'Turn'}
-            {gamePhase === 'river' && 'River'}
-            {gamePhase === 'showdown' && 'Showdown'}
-          </div>
-          <div className="phase-description">
-            {gamePhase === 'preflop' && 'Betting round - Hole cards dealt'}
-            {gamePhase === 'flop' && '3 community cards revealed'}
-            {gamePhase === 'turn' && '4th community card revealed'}
-            {gamePhase === 'river' && '5th community card revealed'}
-            {gamePhase === 'showdown' && 'Hands revealed - Determining winner'}
-          </div>
-        </div>
+            {/* Cards Row: Community Cards, Deck, and Burn Cards - All in Same Row */}
+            <div className="cards-row-container">
+              {/* Community Cards */}
+              <div className="community-cards">
+                <h3>Community Cards</h3>
+                <div className="cards-row">
+                  {communityCards.map((card, index) => {
+                    // Only show cards that should be visible in current phase
+                    const shouldShowCard = (
+                      (gamePhase === 'flop' && index < 3) ||
+                      (gamePhase === 'turn' && index < 4) ||
+                      (gamePhase === 'river' && index < 5) ||
+                      gamePhase === 'showdown'
+                    );
 
-        {/* Phase Announcement */}
-        {phaseAnnouncement && (
-          <div className="phase-announcement">
-            <div className="announcement-content">
-              <div className="announcement-icon">🎯</div>
-              <div className="announcement-text">{phaseAnnouncement}</div>
+                    return (
+                      <Card
+                        key={`community-${index}`}
+                        card={shouldShowCard ? card : null}
+                        isDealing={animatingCardIndices.includes(index)}
+                      />
+                    );
+                  })}
+                  {/* Show placeholder cards for unrevealed cards */}
+                  {gamePhase === 'preflop' && (
+                    <>
+                      <Card card={null} />
+                      <Card card={null} />
+                      <Card card={null} />
+                    </>
+                  )}
+                  {gamePhase === 'flop' && (
+                    <>
+                      <Card card={null} />
+                      <Card card={null} />
+                    </>
+                  )}
+                  {gamePhase === 'turn' && (
+                    <Card card={null} />
+                  )}
+                </div>
+              </div>
+
+              {/* Deck Visual */}
+              <div className="deck-visual">
+                <h3>Deck</h3>
+                <div className="deck-cards">
+                  <Card card={null} />
+                  <div className="deck-count">{deck.getRemainingCards()}</div>
+                </div>
+              </div>
+
+              {/* Burned Cards - Fixed dimensions, always shows space for 3 cards */}
+              <div className="burned-cards">
+                <h3>Burn Cards</h3>
+                <div className="cards-row">
+                  {/* Always render 3 card slots, show actual cards or empty slots */}
+                  {[0, 1, 2].map((index) => {
+                    const card = burnedCards[index];
+                    return (
+                      <Card
+                        key={`burned-${index}`}
+                        card={card || null}
+                        isBurned={true}
+                        isBurnAnimating={burnAnimatingIndex === index}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Human Player - Bottom */}
+            <div className="human-player-section">
+              {players.filter(p => p.isHuman).map((player, index) => {
+                const playerIndex = players.findIndex(p => p.id === player.id);
+                return (
+                  <PlayerArea
+                    key={player.id}
+                    player={player}
+                    isCurrentPlayer={playerIndex === currentPlayerIndex}
+                    gamePhase={gamePhase}
+                    holeCardAnimating={holeCardAnimating}
+                    isActing={actingPlayerId === player.id}
+                    lastAction={playerLastActions[player.id]}
+                  />
+                );
+              })}
             </div>
           </div>
-        )}
 
-        {/* Community Cards */}
-        <div className="community-cards">
-          <h3>Community Cards</h3>
-          <div className="cards-row">
-            {communityCards.map((card, index) => {
-              // Only show cards that should be visible in current phase
-              const shouldShowCard = (
-                (gamePhase === 'flop' && index < 3) ||
-                (gamePhase === 'turn' && index < 4) ||
-                (gamePhase === 'river' && index < 5) ||
-                gamePhase === 'showdown'
-              );
+          {/* Right Side: Top Row (Pot & Game Info) */}
+          <div className="right-side-section">
+            {/* Top Row: Pot Display and Game Info */}
+            <div className="top-info-row">
+              {/* Pot Display */}
+              <div className="pot-display">
+                <h3>Betting Pot</h3>
+                <div className="pot-amount">${pot}</div>
+                <div className="pot-info">
+                  <div className="pot-info-item">
+                    <span>Total in Play:</span>
+                    <span>${players.reduce((total, player) => total + player.chips, 0) + pot}</span>
+                  </div>
+                </div>
+              </div>
 
-              return (
-                <Card
-                  key={`community-${index}`}
-                  card={shouldShowCard ? card : null}
-                  isDealing={animatingCardIndices.includes(index)}
-                />
-              );
-            })}
-            {/* Show placeholder cards for unrevealed cards */}
-            {gamePhase === 'preflop' && (
-              <>
-                <Card card={null} />
-                <Card card={null} />
-                <Card card={null} />
-              </>
-            )}
-            {gamePhase === 'flop' && (
-              <>
-                <Card card={null} />
-                <Card card={null} />
-              </>
-            )}
-            {gamePhase === 'turn' && (
-              <Card card={null} />
-            )}
+              {/* Game Info Box */}
+              <div className="game-info-box">
+                <h3>Game Info</h3>
+                <div className="game-info-static">
+                  <div className="info-item">
+                    <span className="info-label">Round:</span>
+                    <span className="info-value">{roundNumber}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Phase:</span>
+                    <span className="info-value">{gamePhase.charAt(0).toUpperCase() + gamePhase.slice(1)}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Current Bet:</span>
+                    <span className="info-value">${currentBet}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1068,7 +1133,7 @@ function App() {
           <div className="showdown-display">
             <h3>Showdown Results</h3>
             <div className="showdown-hands">
-              {showdownData.hands.map((handData, index) => (
+              {showdownData?.hands.map((handData, index) => (
                 <div key={handData.player.id} className={`showdown-hand ${handData.player.isHuman ? 'human-hand' : 'ai-hand'} ${handData.isWinner ? 'winner' : ''}`}>
                   <div className="showdown-player-name">
                     {handData.player.name}
@@ -1096,10 +1161,10 @@ function App() {
               <h4>Community Cards Used in Winning Hands</h4>
               <div className="community-usage-cards">
                 {communityCards.map((card, index) => {
-                  const isUsedByHuman = showdownData.hands.find(h => h.player.isHuman)?.pokerHand.cards.some(
+                  const isUsedByHuman = showdownData?.hands.find(h => h.player.isHuman)?.pokerHand.cards.some(
                     handCard => handCard.rank === card.rank && handCard.suit === card.suit
                   );
-                  const isUsedByAI = showdownData.hands.find(h => !h.player.isHuman)?.pokerHand.cards.some(
+                  const isUsedByAI = showdownData?.hands.find(h => !h.player.isHuman)?.pokerHand.cards.some(
                     handCard => handCard.rank === card.rank && handCard.suit === card.suit
                   );
 
@@ -1136,7 +1201,7 @@ function App() {
             </div>
 
             {/* Enhanced Winner Announcement with Color-Coded Hand Comparison */}
-            {winner && (
+            {winner && showdownData && (
               <div className={`winner-announcement ${winner.isHuman ? 'human-winner' : 'ai-winner'}`}>
                 <h3>
                   🏆 {winner.name} wins ${pot}! 🏆
@@ -1163,27 +1228,24 @@ function App() {
                   })()}
                 </div>
                 <div className="winning-hand-summary">
-                  {showdownData.hands.find(h => h.isWinner)?.pokerHand.description} wins!
+                  {showdownData?.hands.find(h => h.isWinner)?.pokerHand.description} wins!
                 </div>
+                {/* Next Round Button */}
+                {handComplete && !gameOver && (
+                  <button
+                    onClick={() => {
+                      console.log('DEBUG: Next Round button clicked, handComplete:', handComplete, 'gameOver:', gameOver, 'gamePhase:', gamePhase);
+                      startNextRound();
+                    }}
+                    className="deal-button"
+                  >
+                    Next Round
+                  </button>
+                )}
               </div>
             )}
           </div>
         )}
-
-        {/* Player Areas */}
-        <div className="players-section">
-          {players.map((player, index) => (
-            <PlayerArea
-              key={player.id}
-              player={player}
-              isCurrentPlayer={index === currentPlayerIndex}
-              gamePhase={gamePhase}
-              holeCardAnimating={holeCardAnimating}
-              isActing={actingPlayerId === player.id}
-              lastAction={playerLastActions[player.id]}
-            />
-          ))}
-        </div>
 
         {/* AI Action Display */}
         {aiActionDisplay && (
@@ -1201,7 +1263,7 @@ function App() {
                 ) : (
                   <div className="action-text">
                     AI {aiActionDisplay.action}
-                    {aiActionDisplay.amount && aiActionDisplay.amount > 0 && (
+                    {aiActionDisplay.amount !== undefined && aiActionDisplay.amount > 0 && (
                       <span className="action-amount"> ${aiActionDisplay.amount}</span>
                     )}
                   </div>
@@ -1211,98 +1273,79 @@ function App() {
           </div>
         )}
 
-        {/* Game Controls */}
-        <div className="game-controls">
-          <div className="game-info">
-            <p>Pot: ${pot}</p>
-            <p>Total Money in Play: ${players.reduce((total, player) => total + player.chips, 0) + pot}</p>
-            <p>Current Bet: ${currentBet}</p>
-            <p>Phase: {gamePhase}</p>
-            <p>Current Player: {players[currentPlayerIndex]?.name || 'None'}</p>
-            {winner && handComplete && (
-              <div className="winner-announcement">
-                <h3>🏆 {winner.name} Wins! 🏆</h3>
-                <p>Pot awarded: ${pot}</p>
-              </div>
-            )}
-            <div className="ai-settings">
-              <label htmlFor="ai-personality">AI Personality: </label>
-              <select
-                id="ai-personality"
-                value={aiPersonality}
-                onChange={(e) => setAiPersonality(e.target.value as AIPersonality)}
-                className="ai-personality-select"
-              >
-                <option value="conservative">Conservative</option>
-                <option value="balanced">Balanced</option>
-                <option value="aggressive">Aggressive</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Betting Controls - Only show when it's human player's turn */}
-          {players[currentPlayerIndex]?.isHuman && gamePhase !== 'waiting' && (
-            <div className="betting-controls">
-              <button
-                className="bet-button fold-button"
-                onClick={() => handleBettingAction('fold')}
-                disabled={!validateFoldAction(players[currentPlayerIndex], gamePhase).valid}
-              >
-                Fold
-              </button>
-              {(() => {
-                const callValidation = validateCallAction(players[currentPlayerIndex], currentBet, gamePhase);
-                return (
+        {/* Bottom Row: Player Actions and Game Log */}
+        <div className="bottom-actions-section">
+          {/* Action Buttons - Left Side */}
+          <div className="action-buttons-section">
+            {/* Betting Controls - Always visible, disabled when not player's turn */}
+            {gamePhase !== 'waiting' && (() => {
+              const humanPlayer = players.find(p => p.isHuman);
+              const isPlayerTurn = players[currentPlayerIndex]?.isHuman;
+              const callValidation = humanPlayer ? validateCallAction(humanPlayer, currentBet, gamePhase) : { valid: false, callAmount: 0 };
+              
+              if (!humanPlayer) return null;
+              
+              return (
+                <div className={`betting-controls ${!isPlayerTurn ? 'disabled' : ''}`}>
+                  <button
+                    className="bet-button fold-button"
+                    onClick={() => handleBettingAction('fold')}
+                    disabled={!isPlayerTurn || !validateFoldAction(humanPlayer, gamePhase).valid}
+                  >
+                    Fold
+                  </button>
                   <button
                     className="bet-button call-button"
                     onClick={() => handleBettingAction('call')}
-                    disabled={!callValidation.valid}
+                    disabled={!isPlayerTurn || !callValidation.valid}
                     title={!callValidation.valid ? callValidation.reason : undefined}
                   >
                     Call ${callValidation.callAmount || 0}
                   </button>
-                );
-              })()}
-              <div className="raise-section">
-                <input
-                  type="number"
-                  placeholder="Raise amount"
-                  value={raiseAmount}
-                  onChange={(e) => setRaiseAmount(e.target.value)}
-                  className="raise-input"
-                  min={Math.max(1, Math.floor(currentBet * 0.5))}
-                  disabled={raiseAmount !== '' && !validateRaiseAction(players[currentPlayerIndex], currentBet, raiseAmount, gamePhase).valid}
-                />
-                <button
-                  className="bet-button raise-button"
-                  onClick={() => handleBettingAction('raise')}
-                  disabled={!validateRaiseAction(players[currentPlayerIndex], currentBet, raiseAmount, gamePhase).valid}
-                  title={!validateRaiseAction(players[currentPlayerIndex], currentBet, raiseAmount, gamePhase).valid ?
-                    validateRaiseAction(players[currentPlayerIndex], currentBet, raiseAmount, gamePhase).reason :
-                    undefined}
-                >
-                  Raise
-                </button>
-              </div>
-            </div>
-          )}
+                  <div className="raise-section">
+                    <input
+                      type="number"
+                      placeholder="Raise amount"
+                      value={raiseAmount}
+                      onChange={(e) => setRaiseAmount(e.target.value)}
+                      className="raise-input"
+                      min={Math.max(1, Math.floor(currentBet * 0.5))}
+                      disabled={!isPlayerTurn || (raiseAmount !== '' && !validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid)}
+                    />
+                    <button
+                      className="bet-button raise-button"
+                      onClick={() => handleBettingAction('raise')}
+                      disabled={!isPlayerTurn || !validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid}
+                      title={!validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid ?
+                        validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).reason :
+                        undefined}
+                    >
+                      Raise
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
 
-          <button
-            onClick={() => {
-              console.log('DEBUG: Button clicked, handComplete:', handComplete, 'gameOver:', gameOver, 'gamePhase:', gamePhase);
-              if (handComplete && !gameOver) {
-                startNextRound();
-              } else {
-                dealNewHand();
-              }
-            }}
-            className="deal-button"
-            disabled={(!handComplete && gamePhase !== 'waiting') || gameOver}
-          >
-            {handComplete && !gameOver ? 'Next Round' : handComplete ? 'Deal New Hand' : 'Hand in Progress'}
-          </button>
-          <p>Cards remaining in deck: {deck.getRemainingCards()}</p>
+          {/* Game Log Box - Right Side */}
+          <div className="game-log-box">
+            <h3>Game Log</h3>
+            <div className="log-entries">
+              {gameLog.length === 0 ? (
+                <div className="log-entry">Game started. Waiting for actions...</div>
+              ) : (
+                gameLog.slice().reverse().map((entry, index) => (
+                  <div key={index} className="log-entry">
+                    <span className="log-time">{entry.timestamp.toLocaleTimeString()}</span>
+                    <span className="log-message">{entry.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
+
       </main>
     </div>
   );
