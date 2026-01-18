@@ -1105,23 +1105,6 @@ function App() {
               </div>
             </div>
 
-            {/* Human Player - Bottom */}
-            <div className="human-player-section">
-              {players.filter(p => p.isHuman).map((player, index) => {
-                const playerIndex = players.findIndex(p => p.id === player.id);
-                return (
-                  <PlayerArea
-                    key={player.id}
-                    player={player}
-                    isCurrentPlayer={playerIndex === currentPlayerIndex}
-                    gamePhase={gamePhase}
-                    holeCardAnimating={holeCardAnimating}
-                    isActing={actingPlayerId === player.id}
-                    lastAction={playerLastActions[player.id]}
-                  />
-                );
-              })}
-            </div>
           </div>
         </div>
 
@@ -1270,9 +1253,44 @@ function App() {
           </div>
         )}
 
-        {/* Bottom Row: Player Actions and Game Log */}
+        {/* Bottom Row: Game Log, Player Hand, Player Actions */}
         <div className="bottom-actions-section">
-          {/* Action Buttons - Left Side */}
+          {/* Game Log Box - Left Side */}
+          <div className="game-log-box">
+            <h3>Game Log</h3>
+            <div className="log-entries">
+              {gameLog.length === 0 ? (
+                <div className="log-entry">Game started. Waiting for actions...</div>
+              ) : (
+                gameLog.slice().reverse().map((entry, index) => (
+                  <div key={index} className="log-entry">
+                    <span className="log-time">{entry.timestamp.toLocaleTimeString()}</span>
+                    <span className="log-message">{entry.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Human Player - Center */}
+          <div className="human-player-section">
+            {players.filter(p => p.isHuman).map((player, index) => {
+              const playerIndex = players.findIndex(p => p.id === player.id);
+              return (
+                <PlayerArea
+                  key={player.id}
+                  player={player}
+                  isCurrentPlayer={playerIndex === currentPlayerIndex}
+                  gamePhase={gamePhase}
+                  holeCardAnimating={holeCardAnimating}
+                  isActing={actingPlayerId === player.id}
+                  lastAction={playerLastActions[player.id]}
+                />
+              );
+            })}
+          </div>
+
+          {/* Action Buttons - Right Side */}
           <div className="action-buttons-section">
             {/* Betting Controls - Always visible, disabled when not player's turn */}
             {gamePhase !== 'waiting' && (() => {
@@ -1323,23 +1341,6 @@ function App() {
                 </div>
               );
             })()}
-          </div>
-
-          {/* Game Log Box - Right Side */}
-          <div className="game-log-box">
-            <h3>Game Log</h3>
-            <div className="log-entries">
-              {gameLog.length === 0 ? (
-                <div className="log-entry">Game started. Waiting for actions...</div>
-              ) : (
-                gameLog.slice().reverse().map((entry, index) => (
-                  <div key={index} className="log-entry">
-                    <span className="log-time">{entry.timestamp.toLocaleTimeString()}</span>
-                    <span className="log-message">{entry.message}</span>
-                  </div>
-                ))
-              )}
-            </div>
           </div>
         </div>
 
