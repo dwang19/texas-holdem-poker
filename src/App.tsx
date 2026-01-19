@@ -64,6 +64,7 @@ function App() {
   const [showdownData, setShowdownData] = useState<{
     hands: { player: Player; pokerHand: PokerHand; isWinner: boolean }[];
     communityCardsUsed: CardType[];
+    potAmount: number;
   } | null>(null);
   const [isDealing, setIsDealing] = useState<boolean>(false);
   const [animatingCardIndices, setAnimatingCardIndices] = useState<number[]>([]);
@@ -118,13 +119,16 @@ function App() {
     let winningPlayer: Player;
     let showdownHands: { player: Player; pokerHand: PokerHand; isWinner: boolean }[] = [];
     let communityCardsUsed: CardType[] = [];
+    
+    // Store the pot amount before resetting it
+    const potAmount = pot;
 
     if (activePlayers.length === 1) {
       // Only one player left, they win by default
       winningPlayer = activePlayers[0];
       updatedPlayers = updatedPlayers.map(player =>
         player.id === winningPlayer.id
-          ? { ...player, chips: player.chips + pot }
+          ? { ...player, chips: player.chips + potAmount }
           : player
       );
 
@@ -159,7 +163,7 @@ function App() {
       // Award the pot to the winner
       updatedPlayers = updatedPlayers.map(player =>
         player.id === winningPlayer.id
-          ? { ...player, chips: player.chips + pot }
+          ? { ...player, chips: player.chips + potAmount }
           : player
       );
 
@@ -179,17 +183,30 @@ function App() {
     // Set showdown data for display
     setShowdownData({
       hands: showdownHands,
-      communityCardsUsed
+      communityCardsUsed,
+      potAmount: potAmount
     });
 
     setPlayers(updatedPlayers);
     setWinner(winningPlayer);
+    // Reset pot to 0 after awarding it to the winner
+    setPot(0);
     console.log('DEBUG: Setting handComplete to true in determineWinner');
     setHandComplete(true);
     
-    // Add to game log
+    // Add to game log with detailed hand comparison
     const winningHandDesc = showdownHands.find(h => h.isWinner)?.pokerHand.description || 'best hand';
-    setGameLog(prev => [...prev, { timestamp: new Date(), message: `${winningPlayer.name} wins $${pot} with ${winningHandDesc}` }]);
+    if (showdownHands.length > 1) {
+      // Show comparison in game log
+      const losingHand = showdownHands.find(h => !h.isWinner);
+      const losingHandDesc = losingHand?.pokerHand.description || 'unknown hand';
+      setGameLog(prev => [...prev, { 
+        timestamp: new Date(), 
+        message: `${winningPlayer.name} wins $${potAmount} with ${winningHandDesc} (beats ${losingHand?.player.name}'s ${losingHandDesc})` 
+      }]);
+    } else {
+      setGameLog(prev => [...prev, { timestamp: new Date(), message: `${winningPlayer.name} wins $${potAmount} with ${winningHandDesc}` }]);
+    }
 
     // Check for bust condition (player with $0 chips) - happens in both cases
     const bustedPlayers = updatedPlayers.filter(p => p.chips <= 0);
@@ -1183,33 +1200,40 @@ function App() {
             {/* Enhanced Winner Announcement with Color-Coded Hand Comparison */}
             {winner && showdownData && (
               <div className={`winner-announcement ${winner.isHuman ? 'human-winner' : 'ai-winner'}`}>
-                <h3>
-                  🏆 {winner.name} wins ${pot}! 🏆
+                <h2 className="round-winner-title">
+                  🏆 Round Winner: {winner.name} 🏆
+                </h2>
+                <h3 className="pot-won-amount">
+                  Wins ${showdownData.potAmount}!
                 </h3>
-                <div className="hand-comparison">
-                  {(() => {
-                    const winnerHand = showdownData.hands.find(h => h.isWinner);
-                    const loserHand = showdownData.hands.find(h => !h.isWinner);
+                {showdownData.hands.length > 1 && (
+                  <div className="hand-comparison">
+                    <div className="comparison-header">Hand Comparison:</div>
+                    {(() => {
+                      const winnerHand = showdownData.hands.find(h => h.isWinner);
+                      const loserHand = showdownData.hands.find(h => !h.isWinner);
 
-                    if (winnerHand && loserHand) {
-                      return (
-                        <>
-                          <div className={`hand-result winning-hand ${winnerHand.player.isHuman ? 'human-text' : 'ai-text'}`}>
-                            {winnerHand.pokerHand.description}
+                      if (winnerHand && loserHand) {
+                        return (
+                          <div className="comparison-content">
+                            <div className={`hand-result winning-hand ${winnerHand.player.isHuman ? 'human-text' : 'ai-text'}`}>
+                              <div className="hand-player-name">{winnerHand.player.name}:</div>
+                              <div className="hand-type">{winnerHand.pokerHand.description}</div>
+                            </div>
+                            <div className="vs-divider">
+                              <span className="vs-text">BEATS</span>
+                            </div>
+                            <div className={`hand-result losing-hand ${loserHand.player.isHuman ? 'human-text' : 'ai-text'}`}>
+                              <div className="hand-player-name">{loserHand.player.name}:</div>
+                              <div className="hand-type">{loserHand.pokerHand.description}</div>
+                            </div>
                           </div>
-                          <span className="vs-text">beats</span>
-                          <div className={`hand-result losing-hand ${loserHand.player.isHuman ? 'human-text' : 'ai-text'}`}>
-                            {loserHand.pokerHand.description}
-                          </div>
-                        </>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
-                <div className="winning-hand-summary">
-                  {showdownData?.hands.find(h => h.isWinner)?.pokerHand.description} wins!
-                </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
                 {/* Next Round Button */}
                 {handComplete && !gameOver && (
                   <button
@@ -1217,7 +1241,7 @@ function App() {
                       console.log('DEBUG: Next Round button clicked, handComplete:', handComplete, 'gameOver:', gameOver, 'gamePhase:', gamePhase);
                       startNextRound();
                     }}
-                    className="deal-button"
+                    className="deal-button next-round-button"
                   >
                     Next Round
                   </button>
