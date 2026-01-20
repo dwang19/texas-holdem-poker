@@ -1157,28 +1157,27 @@ function App() {
         <div className="main-game-layout">
           {/* Center Section: Game Info + AI Player, Cards Row, Human Player */}
           <div className="center-section">
-            {/* Top Row: Game Info and AI Player - Side by Side, Vertically Aligned */}
-            <div className="top-row-container">
-              {/* Game Info Box - Left Side */}
-              <div className="game-info-box">
-                <h3>Game Info</h3>
-                <div className="game-info-static">
-                  <div className="info-item">
-                    <span className="info-label">Round:</span>
-                    <span className="info-value">{roundNumber}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Phase:</span>
-                    <span className="info-value">{gamePhase.charAt(0).toUpperCase() + gamePhase.slice(1)}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Current Bet:</span>
-                    <span className="info-value">${currentBet}</span>
-                  </div>
+            {/* Game Info Box - Grid Area: game-info */}
+            <div className="game-info-box">
+              <h3>Game Info</h3>
+              <div className="game-info-static">
+                <div className="info-item">
+                  <span className="info-label">Round:</span>
+                  <span className="info-value">{roundNumber}</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-label">Phase:</span>
+                  <span className="info-value">{gamePhase.charAt(0).toUpperCase() + gamePhase.slice(1)}</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-label">Current Bet:</span>
+                  <span className="info-value">${currentBet}</span>
                 </div>
               </div>
+            </div>
 
-              {/* AI Player - Right Side, Vertically Aligned with Game Info */}
+            {/* Top Row: AI Player - Grid Area: top-row */}
+            <div className="top-row-container">
               <div className="ai-player-section">
                 {players.filter(p => !p.isHuman).map((player, index) => {
                   const playerIndex = players.findIndex(p => p.id === player.id);
@@ -1195,6 +1194,23 @@ function App() {
                     />
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Game Log Box - Grid Area: game-log */}
+            <div className="game-log-box top-row-log">
+              <h3>Game Log</h3>
+              <div className="log-entries">
+                {gameLog.length === 0 ? (
+                  <div className="log-entry">Game started. Waiting for actions...</div>
+                ) : (
+                  gameLog.slice().reverse().map((entry, index) => (
+                    <div key={index} className="log-entry">
+                      <span className="log-time">{entry.timestamp.toLocaleTimeString()}</span>
+                      <span className="log-message">{entry.message}</span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -1280,6 +1296,81 @@ function App() {
                   })}
                 </div>
               </div>
+            </div>
+
+            {/* Human Player - Grid Area: human-player */}
+            <div className="human-player-section">
+              {players.filter(p => p.isHuman).map((player, index) => {
+                const playerIndex = players.findIndex(p => p.id === player.id);
+                return (
+                  <PlayerArea
+                    key={player.id}
+                    player={player}
+                    isCurrentPlayer={playerIndex === currentPlayerIndex}
+                    gamePhase={gamePhase}
+                    holeCardAnimating={holeCardAnimating}
+                    isActing={actingPlayerId === player.id}
+                    lastAction={playerLastActions[player.id]}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Action Buttons - Grid Area: actions */}
+            <div className="action-buttons-section">
+              <h3>Actions</h3>
+              {/* Betting Controls - Hidden during showdown, visible during betting phases */}
+              {gamePhase !== 'waiting' && gamePhase !== 'showdown' && (() => {
+                const humanPlayer = players.find(p => p.isHuman);
+                const isPlayerTurn = players[currentPlayerIndex]?.isHuman;
+                const callValidation = humanPlayer ? validateCallAction(humanPlayer, currentBet, gamePhase) : { valid: false, callAmount: 0 };
+                
+                // Debug logging for button state
+                console.log('DEBUG: Button render - gamePhase:', gamePhase, 'currentPlayerIndex:', currentPlayerIndex, 'isPlayerTurn:', isPlayerTurn, 'handComplete:', handComplete);
+                
+                if (!humanPlayer) return null;
+                
+                return (
+                  <div className={`betting-controls ${!isPlayerTurn ? 'disabled' : ''}`}>
+                    <button
+                      className="bet-button fold-button"
+                      onClick={() => handleBettingAction('fold')}
+                      disabled={!isPlayerTurn || !validateFoldAction(humanPlayer, gamePhase).valid}
+                    >
+                      Fold
+                    </button>
+                    <button
+                      className="bet-button call-button"
+                      onClick={() => handleBettingAction('call')}
+                      disabled={!isPlayerTurn || !callValidation.valid}
+                      title={!callValidation.valid ? callValidation.reason : undefined}
+                    >
+                      Call ${callValidation.callAmount || 0}
+                    </button>
+                    <div className="raise-section">
+                      <input
+                        type="number"
+                        placeholder="Raise amount"
+                        value={raiseAmount}
+                        onChange={(e) => setRaiseAmount(e.target.value)}
+                        className="raise-input"
+                        min={Math.max(1, Math.floor(currentBet * 0.5))}
+                        disabled={!isPlayerTurn || (raiseAmount !== '' && !validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid)}
+                      />
+                      <button
+                        className="bet-button raise-button"
+                        onClick={() => handleBettingAction('raise')}
+                        disabled={!isPlayerTurn || !validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid}
+                        title={!validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid ?
+                          validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).reason :
+                          undefined}
+                      >
+                        Raise
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
           </div>
@@ -1456,99 +1547,6 @@ function App() {
           </div>
         )}
 
-        {/* Bottom Row: Game Log, Player Hand, Player Actions */}
-        <div className="bottom-actions-section">
-          {/* Game Log Box - Left Side */}
-          <div className="game-log-box">
-            <h3>Game Log</h3>
-            <div className="log-entries">
-              {gameLog.length === 0 ? (
-                <div className="log-entry">Game started. Waiting for actions...</div>
-              ) : (
-                gameLog.slice().reverse().map((entry, index) => (
-                  <div key={index} className="log-entry">
-                    <span className="log-time">{entry.timestamp.toLocaleTimeString()}</span>
-                    <span className="log-message">{entry.message}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Human Player - Center */}
-          <div className="human-player-section">
-            {players.filter(p => p.isHuman).map((player, index) => {
-              const playerIndex = players.findIndex(p => p.id === player.id);
-              return (
-                <PlayerArea
-                  key={player.id}
-                  player={player}
-                  isCurrentPlayer={playerIndex === currentPlayerIndex}
-                  gamePhase={gamePhase}
-                  holeCardAnimating={holeCardAnimating}
-                  isActing={actingPlayerId === player.id}
-                  lastAction={playerLastActions[player.id]}
-                />
-              );
-            })}
-          </div>
-
-          {/* Action Buttons - Right Side */}
-          <div className="action-buttons-section">
-            {/* Betting Controls - Hidden during showdown, visible during betting phases */}
-            {gamePhase !== 'waiting' && gamePhase !== 'showdown' && (() => {
-              const humanPlayer = players.find(p => p.isHuman);
-              const isPlayerTurn = players[currentPlayerIndex]?.isHuman;
-              const callValidation = humanPlayer ? validateCallAction(humanPlayer, currentBet, gamePhase) : { valid: false, callAmount: 0 };
-              
-              // Debug logging for button state
-              console.log('DEBUG: Button render - gamePhase:', gamePhase, 'currentPlayerIndex:', currentPlayerIndex, 'isPlayerTurn:', isPlayerTurn, 'handComplete:', handComplete);
-              
-              if (!humanPlayer) return null;
-              
-              return (
-                <div className={`betting-controls ${!isPlayerTurn ? 'disabled' : ''}`}>
-                  <button
-                    className="bet-button fold-button"
-                    onClick={() => handleBettingAction('fold')}
-                    disabled={!isPlayerTurn || !validateFoldAction(humanPlayer, gamePhase).valid}
-                  >
-                    Fold
-                  </button>
-                  <button
-                    className="bet-button call-button"
-                    onClick={() => handleBettingAction('call')}
-                    disabled={!isPlayerTurn || !callValidation.valid}
-                    title={!callValidation.valid ? callValidation.reason : undefined}
-                  >
-                    Call ${callValidation.callAmount || 0}
-                  </button>
-                  <div className="raise-section">
-                    <input
-                      type="number"
-                      placeholder="Raise amount"
-                      value={raiseAmount}
-                      onChange={(e) => setRaiseAmount(e.target.value)}
-                      className="raise-input"
-                      min={Math.max(1, Math.floor(currentBet * 0.5))}
-                      disabled={!isPlayerTurn || (raiseAmount !== '' && !validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid)}
-                    />
-                    <button
-                      className="bet-button raise-button"
-                      onClick={() => handleBettingAction('raise')}
-                      disabled={!isPlayerTurn || !validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid}
-                      title={!validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid ?
-                        validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).reason :
-                        undefined}
-                    >
-                      Raise
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
 
       </main>
     </div>

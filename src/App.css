@@ -1,3 +1,34 @@
+/* ============================================
+   CSS CUSTOM PROPERTIES (Design Tokens)
+   ============================================ */
+:root {
+  /* Layout Dimensions */
+  --container-max-width: 1400px;
+  --container-padding: 15px;
+  --gap-small: 10px;
+  --gap-medium: 15px;
+  --gap-large: 20px;
+  
+  /* Top Row Components */
+  --game-info-width: 250px;
+  --game-log-width: 425px;
+  --game-log-height: 255px;
+  
+  /* Cards Row Components */
+  --pot-width: 180px;
+  --pot-height: 210px;
+  --deck-width: 130px;
+  --deck-height: 210px;
+  --community-cards-min-width: 480px;
+  --community-cards-height: 210px;
+  --burned-cards-width: 220px;
+  --burned-cards-height: 210px;
+  
+  /* Bottom Section */
+  --action-buttons-min-width: 300px;
+  --action-buttons-max-width: 500px;
+}
+
 .App {
   text-align: center;
   min-height: 100vh;
@@ -7,8 +38,8 @@
 
 .App-header {
   background: rgba(0, 0, 0, 0.3);
-  padding: 15px;
-  margin-bottom: 20px;
+  padding: var(--container-padding);
+  margin-bottom: var(--gap-large);
   border-radius: 10px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
@@ -18,75 +49,105 @@
 }
 
 .game-container {
-  max-width: 1400px;
+  max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: 15px;
+  padding: var(--container-padding);
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: var(--gap-medium);
 }
 
 /* Main Game Layout */
 .main-game-layout {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--gap-large);
   position: relative;
 }
 
-/* Center Section: Top Row (Game Info + AI Player), Cards Row, Human Player */
+/* Center Section: CSS Grid Layout */
 .center-section {
+  display: grid;
+  grid-template-columns: var(--game-info-width) 1fr var(--game-log-width);
+  grid-template-rows: auto auto auto;
+  grid-template-areas: 
+    "game-info top-row game-log"
+    "cards-row cards-row cards-row"
+    "human-player human-player actions";
+  gap: var(--gap-medium);
+  width: 100%;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+}
+
+/* Top Row Container: CSS Grid Layout */
+.top-row-container {
+  grid-area: top-row;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas: "ai-player";
+  align-items: center;
+  justify-items: center;
+  width: 100%;
+  min-height: 60px;
+}
+
+/* Cards Row Container: CSS Grid */
+.cards-row-container {
+  grid-area: cards-row;
+  display: grid;
+  grid-template-columns: var(--pot-width) minmax(var(--community-cards-min-width), 1fr) var(--deck-width) var(--burned-cards-width);
+  grid-template-areas: "pot community-cards deck burned-cards";
+  gap: var(--gap-small);
+  align-items: start;
+  justify-items: center;
+  width: 100%;
+}
+
+/* AI Player Section - Grid Area (Centered Column) */
+.top-row-container .ai-player-section {
+  grid-area: ai-player;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  justify-self: center;
+  width: 100%;
+}
+
+/* Human Player Section - Grid Area (Same column as AI Player) */
+.center-section .human-player-section {
+  grid-area: human-player;
+  grid-column: 2; /* Matches the center column where AI Player is */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  justify-self: center;
+  width: 100%;
+  margin-top: var(--gap-large);
+}
+
+/* Action Buttons Section - Grid Area in Center Section */
+.center-section .action-buttons-section {
+  grid-area: actions;
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  width: 100%;
   align-items: center;
+  justify-content: center;
+  padding: var(--gap-large);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin-top: var(--gap-large);
 }
 
-/* Top Row Container: Game Info and AI Player - Side by Side, Vertically Aligned */
-.top-row-container {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 15px;
-  position: relative;
-  min-height: 60px; /* Ensure space for content */
-}
-
-/* Cards Row Container: Pot, Community Cards, Deck, and Burn Cards in Same Row */
-.cards-row-container {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  align-items: flex-start;
-  flex-wrap: nowrap;
-  width: 100%;
-  position: relative;
-}
-
-
-
-/* AI Player Section - In Top Row Container, Centered to Match Human Player */
-.top-row-container .ai-player-section {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  margin-bottom: 0;
-  /* Centered naturally by parent's justify-content: center, matching Human Player */
-  flex: 0 1 auto;
-}
-
-/* Human Player Section - Aligned horizontally with AI Player (when in center-section) */
-.center-section .human-player-section {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  width: 100%;
-  margin-top: 20px;
+.center-section .action-buttons-section h3 {
+  margin: 0 0 var(--gap-medium) 0;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
 }
 
 /* Human Player Section - In Bottom Actions Section (side by side with Game Log and Actions) */
@@ -101,30 +162,36 @@
   height: 100%;
 }
 
-/* Align player sections with center of community cards */
-/* Calculate offset: pot-column (200px) + gap (15px) + half of community-cards (250px) */
-.ai-player-section,
-.human-player-section {
-  /* The player sections will naturally align with the center since both use justify-content: center */
-  /* The community cards box is centered in the flex container, so players align naturally */
-}
-
-
-
 /* Bottom Row: Game Log, Player Hand, Player Actions - Side by Side */
 .bottom-actions-section {
   display: flex;
-  gap: 15px;
+  gap: var(--gap-medium);
   justify-content: center;
   align-items: stretch;
   flex-wrap: nowrap;
-  margin-top: 15px;
+  margin-top: var(--gap-medium);
   width: 100%;
 }
 
-/* Game Info Box - In Top Row Container, Positioned to Left */
+/* Game Info Box - Grid Area */
+.center-section .game-info-box {
+  grid-area: game-info;
+  padding: var(--gap-medium);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--game-info-width);
+  box-sizing: border-box;
+  justify-self: start;
+}
+
+/* Game Info Box - In Top Row Container (for backward compatibility) */
 .top-row-container .game-info-box {
-  padding: 15px;
+  padding: var(--gap-medium);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -134,15 +201,10 @@
   min-width: 200px;
   max-width: 300px;
   box-sizing: border-box;
-  /* Positioned absolutely to left, doesn't affect AI Player centering */
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
 }
 
 .game-info-box h3 {
-  margin: 0 0 15px 0;
+  margin: 0 0 var(--gap-medium) 0;
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
@@ -152,7 +214,7 @@
 .game-info-static {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--gap-small);
 }
 
 .info-item {
@@ -175,9 +237,26 @@
   font-size: 16px;
 }
 
-/* Game Log Box - Separate Box */
+/* Game Log Box - Grid Area in Top Row */
+.center-section .game-log-box.top-row-log {
+  grid-area: game-log;
+  padding: var(--gap-medium);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--game-log-width);
+  height: var(--game-log-height);
+  box-sizing: border-box;
+  justify-self: end;
+}
+
+/* Game Log Box - Separate Box (for other contexts) */
 .game-log-box {
-  padding: 15px;
+  padding: var(--gap-medium);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -188,7 +267,7 @@
 }
 
 .game-log-box h3 {
-  margin: 0 0 15px 0;
+  margin: 0 0 var(--gap-medium) 0;
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
@@ -228,7 +307,7 @@
   border-radius: 6px;
   font-size: 12px;
   display: flex;
-  gap: 10px;
+  gap: var(--gap-small);
   align-items: center;
 }
 
@@ -243,9 +322,9 @@
   flex: 1;
 }
 
-/* Pot Display - In Top Info Row */
-/* Pot Display - In Cards Row Container, Left of Community Cards */
+/* Pot Display - Grid Area */
 .pot-display {
+  grid-area: pot;
   padding: 12px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
@@ -255,65 +334,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 180px;
-  height: 210px;
-  flex-shrink: 0;
+  width: 100%;
+  max-width: var(--pot-width);
+  height: var(--pot-height);
   box-sizing: border-box;
 }
-
-/* Deck Visual - In Cards Row Container */
-.deck-visual {
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  min-width: 130px;
-  height: 210px;
-  flex-shrink: 0;
-  box-sizing: border-box;
-}
-
-.deck-visual h3 {
-  margin: 0 0 15px 0;
-  color: #fff;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  text-align: center;
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.deck-visual h3 {
-  margin: 0 0 15px 0;
-  color: #fff;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  text-align: center;
-  font-size: 16px;
-}
-
-.deck-cards {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.deck-count {
-  position: absolute;
-  bottom: -25px;
-  color: #fff;
-  font-weight: bold;
-  font-size: 14px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
 
 .pot-display h3 {
-  margin: 0 0 15px 0;
+  margin: 0 0 var(--gap-medium) 0;
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
@@ -325,7 +353,7 @@
   font-weight: bold;
   color: #ffd700;
   text-shadow: 0 2px 8px rgba(255, 215, 0, 0.5);
-  margin-bottom: 10px;
+  margin-bottom: var(--gap-small);
 }
 
 .pot-info {
@@ -345,24 +373,67 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
-/* Community Cards - In Cards Row Container */
+/* Deck Visual - Grid Area */
+.deck-visual {
+  grid-area: deck;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: var(--deck-width);
+  height: var(--deck-height);
+  box-sizing: border-box;
+}
+
+.deck-visual h3 {
+  margin: 0 0 var(--gap-medium) 0;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.deck-cards {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.deck-count {
+  position: absolute;
+  bottom: -25px;
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Community Cards - Grid Area */
 .community-cards {
+  grid-area: community-cards;
   padding: 12px 8px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  flex: 2;
-  min-width: 480px;
-  height: 210px;
+  min-width: var(--community-cards-min-width);
+  width: 100%;
+  height: var(--community-cards-height);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  flex-shrink: 0;
 }
 
 .community-cards h3 {
-  margin-bottom: 15px;
+  margin-bottom: var(--gap-medium);
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
@@ -377,26 +448,27 @@
   overflow: visible;
   height: auto;
   flex-shrink: 0;
-  gap: 10px;
+  gap: var(--gap-small);
 }
 
-/* Burned Cards - In Cards Row Container - Fixed Dimensions */
+/* Burned Cards - Grid Area */
 .burned-cards {
+  grid-area: burned-cards;
   padding: 12px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  min-width: 220px;
-  height: 210px;
-  flex-shrink: 0;
+  width: 100%;
+  max-width: var(--burned-cards-width);
+  height: var(--burned-cards-height);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 
 .burned-cards h3 {
-  margin-bottom: 15px;
+  margin-bottom: var(--gap-medium);
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
@@ -406,13 +478,13 @@
 /* Action Buttons Section - In Bottom Actions Section */
 .bottom-actions-section .action-buttons-section {
   flex: 0 1 auto;
-  min-width: 300px;
-  max-width: 500px;
+  min-width: var(--action-buttons-min-width);
+  max-width: var(--action-buttons-max-width);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: var(--gap-large);
   background: rgba(255, 255, 255, 0.05);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -423,8 +495,8 @@
 /* Game Log Box - In Bottom Actions Section */
 .bottom-actions-section .game-log-box {
   flex: 0 1 auto;
-  min-width: 300px;
-  max-width: 500px;
+  min-width: var(--action-buttons-min-width);
+  max-width: var(--action-buttons-max-width);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -441,7 +513,7 @@
 .players-section,
 .game-controls {
   margin: 30px 0;
-  padding: 20px;
+  padding: var(--gap-large);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -450,7 +522,7 @@
 
 .burned-cards h3,
 .community-cards h3 {
-  margin-bottom: 15px;
+  margin-bottom: var(--gap-medium);
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
@@ -459,7 +531,7 @@
 .cards-row {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: var(--gap-small);
   flex-wrap: wrap;
 }
 
@@ -481,29 +553,45 @@
 
 @media (max-width: 768px) {
   .game-container {
-    padding: 10px;
-    gap: 15px;
+    padding: var(--gap-small);
+    gap: var(--gap-medium);
   }
   
   .main-game-layout {
     flex-direction: column;
   }
   
+  .center-section {
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "game-info"
+      "top-row"
+      "game-log"
+      "cards-row"
+      "human-player";
+  }
+  
   .top-row-container {
-    flex-direction: column;
-    align-items: center;
+    grid-template-columns: 1fr;
   }
   
   .top-row-container .game-info-box,
-  .top-row-container .ai-player-section {
+  .top-row-container .ai-player-section,
+  .center-section .game-log-box.top-row-log {
     max-width: 100%;
     min-width: unset;
     width: 100%;
+    height: auto;
+    max-height: 200px;
   }
   
   .cards-row-container {
-    flex-direction: column;
-    align-items: center;
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "pot"
+      "community-cards"
+      "deck"
+      "burned-cards";
   }
   
   .cards-row-container .pot-display,
@@ -527,20 +615,24 @@
     min-width: unset;
     width: 100%;
   }
+  
+  .center-section .human-player-section {
+    grid-column: 1;
+  }
 }
 
 .game-controls {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
+  gap: var(--gap-medium);
 }
 
 .deal-button {
   background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
   color: white;
   border: none;
-  padding: 15px 30px;
+  padding: var(--gap-medium) 30px;
   font-size: 18px;
   font-weight: bold;
   border-radius: 25px;
@@ -562,11 +654,11 @@
 .betting-controls {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: var(--gap-medium);
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  margin: 20px 0;
+  margin: var(--gap-large) 0;
   width: 100%;
   transition: opacity 0.3s ease;
 }
@@ -626,12 +718,12 @@
 
 .raise-section {
   display: flex;
-  gap: 10px;
+  gap: var(--gap-small);
   align-items: center;
 }
 
 .raise-input {
-  padding: 10px 15px;
+  padding: var(--gap-small) var(--gap-medium);
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 15px;
   background: rgba(255, 255, 255, 0.1);
@@ -669,10 +761,10 @@
 /* Game Info */
 .game-info {
   display: flex;
-  gap: 20px;
+  gap: var(--gap-large);
   justify-content: center;
   flex-wrap: wrap;
-  margin-bottom: 15px;
+  margin-bottom: var(--gap-medium);
 }
 
 .game-info p {
@@ -688,16 +780,16 @@
 .winner-announcement {
   background: linear-gradient(135deg, #ffd700 0%, #ffed4a 100%);
   color: #2c3e50;
-  padding: 20px;
+  padding: var(--gap-large);
   border-radius: 15px;
   box-shadow: 0 8px 32px rgba(255, 215, 0, 0.3);
   animation: winnerPulse 2s infinite;
-  margin: 10px 0;
+  margin: var(--gap-small) 0;
   border: 3px solid #fff;
 }
 
 .winner-announcement h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 var(--gap-small) 0;
   font-size: 24px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -786,15 +878,15 @@
 .dealer-choice {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--gap-small);
 }
 
 .dealer-choice label {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--gap-small);
   cursor: pointer;
-  padding: 10px;
+  padding: var(--gap-small);
   border: 2px solid #e1e8ed;
   border-radius: 10px;
   transition: all 0.3s ease;
@@ -811,19 +903,19 @@
 
 .game-rules {
   background: rgba(50, 130, 184, 0.1);
-  padding: 20px;
+  padding: var(--gap-large);
   border-radius: 15px;
   border-left: 4px solid #3282b8;
 }
 
 .game-rules h3 {
   color: #3282b8;
-  margin-bottom: 15px;
+  margin-bottom: var(--gap-medium);
 }
 
 .game-rules ul {
   text-align: left;
-  padding-left: 20px;
+  padding-left: var(--gap-large);
 }
 
 .game-rules li {
@@ -835,14 +927,14 @@
   background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
   color: white;
   border: none;
-  padding: 15px 40px;
+  padding: var(--gap-medium) 40px;
   font-size: 18px;
   font-weight: bold;
   border-radius: 25px;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-  margin-top: 20px;
+  margin-top: var(--gap-large);
 }
 
 .start-game-button:hover {
@@ -883,7 +975,7 @@
 
 .game-over-screen h2 {
   font-size: 32px;
-  margin-bottom: 20px;
+  margin-bottom: var(--gap-large);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -903,14 +995,14 @@
 
 .final-scores {
   background: rgba(50, 130, 184, 0.1);
-  padding: 20px;
+  padding: var(--gap-large);
   border-radius: 15px;
   margin-bottom: 30px;
 }
 
 .final-scores h3 {
   color: #3282b8;
-  margin-bottom: 15px;
+  margin-bottom: var(--gap-medium);
 }
 
 .final-scores p {
@@ -923,7 +1015,7 @@
   background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
   color: white;
   border: none;
-  padding: 15px 40px;
+  padding: var(--gap-medium) 40px;
   font-size: 18px;
   font-weight: bold;
   border-radius: 25px;
@@ -946,7 +1038,7 @@
 .phase-indicator {
   text-align: center;
   margin: 30px 0;
-  padding: 20px;
+  padding: var(--gap-large);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -1058,8 +1150,8 @@
 
 /* AI Action Display */
 .ai-action-display {
-  margin: 20px 0;
-  padding: 15px;
+  margin: var(--gap-large) 0;
+  padding: var(--gap-medium);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -1071,7 +1163,7 @@
 .ai-action-content {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: var(--gap-medium);
 }
 
 .ai-avatar {
@@ -1148,7 +1240,7 @@
 
 /* Phase Announcement */
 .phase-announcement {
-  margin: 15px 0;
+  margin: var(--gap-medium) 0;
   animation: announcementSlideIn 0.6s ease-out;
 }
 
@@ -1156,9 +1248,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 15px;
+  gap: var(--gap-medium);
   background: linear-gradient(135deg, rgba(255, 167, 38, 0.9) 0%, rgba(255, 215, 0, 0.9) 100%);
-  padding: 15px 25px;
+  padding: var(--gap-medium) 25px;
   border-radius: 25px;
   box-shadow: 0 8px 32px rgba(255, 167, 38, 0.4);
   border: 2px solid rgba(255, 255, 255, 0.3);
@@ -1212,7 +1304,7 @@
 }
 
 .showdown-display h3 {
-  margin: 0 0 20px 0;
+  margin: 0 0 var(--gap-large) 0;
   font-size: 28px;
   text-align: center;
   background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%);
@@ -1233,7 +1325,7 @@
 .showdown-hand {
   flex: 1;
   min-width: 300px;
-  padding: 20px;
+  padding: var(--gap-large);
   background: rgba(255, 255, 255, 0.9);
   border-radius: 15px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
@@ -1276,7 +1368,7 @@
 .showdown-hand-description {
   font-size: 16px;
   color: #666;
-  margin-bottom: 15px;
+  margin-bottom: var(--gap-medium);
   font-weight: 500;
 }
 
@@ -1290,13 +1382,13 @@
 /* Community Card Usage Display */
 .showdown-community-usage {
   margin-top: 25px;
-  padding: 20px;
+  padding: var(--gap-large);
   background: rgba(0, 0, 0, 0.05);
   border-radius: 15px;
 }
 
 .showdown-community-usage h4 {
-  margin: 0 0 15px 0;
+  margin: 0 0 var(--gap-medium) 0;
   text-align: center;
   color: #2c3e50;
   font-size: 18px;
@@ -1305,7 +1397,7 @@
 .community-usage-cards {
   display: flex;
   justify-content: center;
-  gap: 20px;
+  gap: var(--gap-large);
   flex-wrap: wrap;
 }
 
@@ -1344,7 +1436,7 @@
 /* Winner Announcement */
 .winner-announcement {
   margin-top: 25px;
-  padding: 20px;
+  padding: var(--gap-large);
   border-radius: 15px;
   text-align: center;
   animation: winnerCelebration 1s ease-out;
@@ -1361,13 +1453,13 @@
 }
 
 .winner-announcement h3 {
-  margin: 0 0 15px 0;
+  margin: 0 0 var(--gap-medium) 0;
   font-size: 24px;
   color: #2c3e50;
 }
 
 .round-winner-title {
-  margin: 0 0 10px 0;
+  margin: 0 0 var(--gap-small) 0;
   font-size: 32px;
   font-weight: bold;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
@@ -1375,7 +1467,7 @@
 }
 
 .pot-won-amount {
-  margin: 0 0 20px 0;
+  margin: 0 0 var(--gap-large) 0;
   font-size: 28px;
   font-weight: bold;
   color: #ffd700;
@@ -1389,7 +1481,7 @@
   background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
   color: white;
   border: none;
-  padding: 15px 40px;
+  padding: var(--gap-medium) 40px;
   font-size: 20px;
   font-weight: bold;
   border-radius: 25px;
@@ -1410,8 +1502,8 @@
 }
 
 .hand-comparison {
-  margin: 20px 0;
-  padding: 20px;
+  margin: var(--gap-large) 0;
+  padding: var(--gap-large);
   background: rgba(255, 255, 255, 0.3);
   border-radius: 15px;
   border: 2px solid rgba(255, 255, 255, 0.5);
@@ -1420,7 +1512,7 @@
 .comparison-header {
   font-size: 18px;
   font-weight: bold;
-  margin-bottom: 15px;
+  margin-bottom: var(--gap-medium);
   color: #2c3e50;
   text-align: center;
 }
@@ -1429,12 +1521,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
+  gap: var(--gap-medium);
 }
 
 .hand-result {
   font-weight: bold;
-  padding: 12px 20px;
+  padding: 12px var(--gap-large);
   border-radius: 10px;
   font-size: 16px;
   min-width: 250px;
@@ -1454,8 +1546,8 @@
 }
 
 .vs-divider {
-  margin: 10px 0;
-  padding: 8px 20px;
+  margin: var(--gap-small) 0;
+  padding: 8px var(--gap-large);
   background: rgba(255, 255, 255, 0.5);
   border-radius: 20px;
   font-weight: bold;
@@ -1482,10 +1574,10 @@
 }
 
 .winning-hand-summary {
-  margin-top: 15px;
+  margin-top: var(--gap-medium);
   font-size: 16px;
   font-weight: bold;
-  padding: 10px;
+  padding: var(--gap-small);
   border-radius: 8px;
   animation: winningHandGlow 2s ease-in-out infinite alternate;
 }
@@ -1565,7 +1657,7 @@
 @media (max-width: 768px) {
   .showdown-hands {
     flex-direction: column;
-    gap: 20px;
+    gap: var(--gap-large);
   }
 
   .showdown-hand {
@@ -1573,7 +1665,7 @@
   }
 
   .community-usage-cards {
-    gap: 10px;
+    gap: var(--gap-small);
   }
 
   .hand-comparison {
@@ -1585,4 +1677,3 @@
     margin: 5px 0;
   }
 }
-
