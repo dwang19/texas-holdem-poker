@@ -15,13 +15,13 @@
   --game-log-height: 255px;
   
   /* Cards Row Components */
-  --pot-width: 180px;
+  --pot-width: 250px;
   --pot-height: 210px;
   --deck-width: 130px;
   --deck-height: 210px;
-  --community-cards-min-width: 480px;
+  --community-cards-min-width: 420px;
   --community-cards-height: 210px;
-  --burned-cards-width: 220px;
+  --burned-cards-width: 280px;
   --burned-cards-height: 210px;
   
   /* Bottom Section */
@@ -249,9 +249,10 @@
   flex-direction: column;
   width: 100%;
   max-width: var(--game-log-width);
-  height: var(--game-log-height);
   box-sizing: border-box;
   justify-self: end;
+  align-self: stretch;
+  height: 100%;
 }
 
 /* Game Log Box - Separate Box (for other contexts) */
@@ -325,7 +326,7 @@
 /* Pot Display - Grid Area */
 .pot-display {
   grid-area: pot;
-  padding: 12px;
+  padding: var(--gap-medium);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -338,22 +339,28 @@
   max-width: var(--pot-width);
   height: var(--pot-height);
   box-sizing: border-box;
+  position: relative;
 }
 
 .pot-display h3 {
-  margin: 0 0 var(--gap-medium) 0;
+  position: absolute;
+  top: var(--gap-medium);
+  left: 0;
+  right: 0;
+  margin: 0;
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .pot-amount {
-  font-size: 32px;
+  font-size: 48px;
   font-weight: bold;
   color: #ffd700;
   text-shadow: 0 2px 8px rgba(255, 215, 0, 0.5);
-  margin-bottom: var(--gap-small);
+  margin: 0;
+  text-align: center;
 }
 
 .pot-info {
@@ -376,7 +383,7 @@
 /* Deck Visual - Grid Area */
 .deck-visual {
   grid-area: deck;
-  padding: 12px;
+  padding: var(--gap-medium);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -396,7 +403,7 @@
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
-  font-size: 16px;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
@@ -419,7 +426,7 @@
 /* Community Cards - Grid Area */
 .community-cards {
   grid-area: community-cards;
-  padding: 12px 8px;
+  padding: var(--gap-medium);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -433,10 +440,11 @@
 }
 
 .community-cards h3 {
-  margin-bottom: var(--gap-medium);
+  margin: 0 0 var(--gap-medium) 0;
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
@@ -454,7 +462,7 @@
 /* Burned Cards - Grid Area */
 .burned-cards {
   grid-area: burned-cards;
-  padding: 12px;
+  padding: var(--gap-medium);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
@@ -468,10 +476,11 @@
 }
 
 .burned-cards h3 {
-  margin-bottom: var(--gap-medium);
+  margin: 0 0 var(--gap-medium) 0;
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
@@ -522,10 +531,11 @@
 
 .burned-cards h3,
 .community-cards h3 {
-  margin-bottom: var(--gap-medium);
+  margin: 0 0 var(--gap-medium) 0;
   color: #fff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   text-align: center;
+  font-size: 18px;
 }
 
 .cards-row {
@@ -537,10 +547,12 @@
 
 /* Burn cards row should not wrap and maintain consistent spacing */
 .burned-cards .cards-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   flex-wrap: nowrap;
-  justify-content: flex-start;
+  gap: var(--gap-small);
   min-height: 120px;
-  align-items: flex-start;
 }
 
 /* Legacy players-section kept for compatibility but not used in new layout */

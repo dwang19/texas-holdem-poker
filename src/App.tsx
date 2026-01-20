@@ -1220,12 +1220,6 @@ function App() {
               <div className="pot-display">
                 <h3>Betting Pot</h3>
                 <div className="pot-amount">${pot}</div>
-                <div className="pot-info">
-                  <div className="pot-info-item">
-                    <span>Total in Play:</span>
-                    <span>${players.reduce((total, player) => total + player.chips, 0) + pot}</span>
-                  </div>
-                </div>
               </div>
 
               {/* Community Cards */}
