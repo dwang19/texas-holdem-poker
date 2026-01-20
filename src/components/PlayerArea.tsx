@@ -10,6 +10,7 @@ interface PlayerAreaProps {
   holeCardAnimating?: boolean;
   isActing?: boolean;
   lastAction?: string;
+  aiCardsFlipping?: boolean;
 }
 
 const PlayerArea: React.FC<PlayerAreaProps> = ({
@@ -18,7 +19,8 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
   gamePhase = 'waiting',
   holeCardAnimating = false,
   isActing = false,
-  lastAction = ''
+  lastAction = '',
+  aiCardsFlipping = false
 }) => {
   const getPositionIndicators = () => {
     const indicators = [];
@@ -85,15 +87,27 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
 
       <div className="player-cards">
         <div className="cards-row">
-          {player.cards.map((card, index) => (
-            <Card
-              key={`${player.id}-${index}`}
-              card={card}
-              hidden={(!player.isHuman && gamePhase !== 'showdown') || player.hasFolded}
-              size="medium"
-              isDealing={holeCardAnimating}
-            />
-          ))}
+          {player.cards.map((card, index) => {
+            // For AI cards during showdown flip, show as hidden initially, then flip
+            const shouldFlip = !player.isHuman && aiCardsFlipping && gamePhase === 'showdown' && !player.hasFolded;
+            const shouldHide = (!player.isHuman && gamePhase !== 'showdown' && !shouldFlip) || player.hasFolded;
+            
+            // Debug logging for AI player cards
+            if (!player.isHuman && gamePhase === 'showdown') {
+              console.log(`DEBUG PlayerArea: AI card ${index} - shouldFlip: ${shouldFlip}, aiCardsFlipping: ${aiCardsFlipping}, gamePhase: ${gamePhase}, hasFolded: ${player.hasFolded}`);
+            }
+            
+            return (
+              <Card
+                key={`${player.id}-${index}`}
+                card={card}
+                hidden={shouldHide}
+                size="medium"
+                isDealing={holeCardAnimating}
+                isFlipping={shouldFlip}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

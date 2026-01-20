@@ -15,6 +15,7 @@ interface CardProps {
   highlightColor?: 'green' | 'blue';
   edgeHighlight?: 'top' | 'bottom' | 'both';
   edgeHighlightColor?: 'green' | 'blue';
+  isFlipping?: boolean;
 }
 
 const Card: React.FC<CardProps> = ({
@@ -28,7 +29,8 @@ const Card: React.FC<CardProps> = ({
   isHighlighted = false,
   highlightColor = 'green',
   edgeHighlight,
-  edgeHighlightColor = 'green'
+  edgeHighlightColor = 'green',
+  isFlipping = false
 }) => {
   if (!card || isBurned) {
     const burnClass = isBurned ? 'card--burned' : 'card--empty';
@@ -42,7 +44,7 @@ const Card: React.FC<CardProps> = ({
     );
   }
 
-  if (hidden) {
+  if (hidden && !isFlipping) {
     return (
       <div className={`card card--hidden card--${size} ${className}`}>
         <div className="card__back">
@@ -58,6 +60,50 @@ const Card: React.FC<CardProps> = ({
   const dealingClass = isDealing ? 'card--dealing' : '';
   const highlightClass = isHighlighted ? `card--highlighted card--highlight-${highlightColor}` : '';
   const edgeHighlightClass = edgeHighlight ? `card--edge-highlight-${edgeHighlight} card--edge-${edgeHighlightColor}` : '';
+  const flipClass = isFlipping ? 'card--flipping' : '';
+  
+  // If flipping, show both back and front with flip animation
+  if (isFlipping) {
+    return (
+      <div className={`card card--${size} ${flipClass} ${className}`}>
+        <div className="card__flip-container">
+          <div className="card__flip-back">
+            <div className="card__back">
+              <div className="card__pattern"></div>
+            </div>
+          </div>
+          <div className="card__flip-front">
+            <div className="card__front">
+              <div className="card__corner card__corner--top-left">
+                <div className="card__rank" style={{ color: suitColor }}>
+                  {card.displayRank}
+                </div>
+                <div className="card__suit" style={{ color: suitColor }}>
+                  {suitSymbol}
+                </div>
+              </div>
+
+              <div className="card__center">
+                <div className="card__suit-large" style={{ color: suitColor }}>
+                  {suitSymbol}
+                </div>
+              </div>
+
+              <div className="card__corner card__corner--bottom-right">
+                <div className="card__rank card__rank--rotated" style={{ color: suitColor }}>
+                  {card.displayRank}
+                </div>
+                <div className="card__suit card__suit--rotated" style={{ color: suitColor }}>
+                  {suitSymbol}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className={`card card--${size} ${dealingClass} ${highlightClass} ${edgeHighlightClass} ${className}`}>
       <div className="card__front">
