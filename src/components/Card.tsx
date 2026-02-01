@@ -16,6 +16,7 @@ interface CardProps {
   edgeHighlight?: 'top' | 'bottom' | 'both';
   edgeHighlightColor?: 'green' | 'blue';
   isFlipping?: boolean;
+  isDeck?: boolean;
 }
 
 const Card: React.FC<CardProps> = ({
@@ -30,13 +31,48 @@ const Card: React.FC<CardProps> = ({
   highlightColor = 'green',
   edgeHighlight,
   edgeHighlightColor = 'green',
-  isFlipping = false
+  isFlipping = false,
+  isDeck = false
 }) => {
-  if (!card || isBurned) {
-    const burnClass = isBurned ? 'card--burned' : 'card--empty';
-    const animClass = isBurnAnimating ? 'card--burn-animating' : '';
+  // Handle deck card: show as solid facedown card with stacked effect
+  if (isDeck) {
     return (
-      <div className={`card ${burnClass} card--${size} ${animClass} ${className}`}>
+      <div className={`card card--deck card--hidden card--${size} ${className}`}>
+        <div className="card__back">
+          <div className="card__pattern"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle burned cards: if burned and card exists, show as facedown; if burned and no card, show as empty
+  if (isBurned) {
+    const animClass = isBurnAnimating ? 'card--burn-animating' : '';
+    if (card) {
+      // Burned card exists - show as regular facedown card
+      return (
+        <div className={`card card--hidden card--${size} ${animClass} ${className}`}>
+          <div className="card__back">
+            <div className="card__pattern"></div>
+          </div>
+        </div>
+      );
+    } else {
+      // No burned card yet - show as transparent empty slot
+      return (
+        <div className={`card card--empty card--${size} ${animClass} ${className}`}>
+          <div className="card__back">
+            <div className="card__pattern"></div>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // Handle empty cards (not burned)
+  if (!card) {
+    return (
+      <div className={`card card--empty card--${size} ${className}`}>
         <div className="card__back">
           <div className="card__pattern"></div>
         </div>

@@ -5,6 +5,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: transform 0.3s ease, box-shadow 0.2s ease, opacity 0.3s ease;
   font-family: 'Arial', sans-serif;
+  flex-shrink: 0;
+  margin: 0;
 }
 
 .card:hover {
@@ -118,17 +120,57 @@
   opacity: 0.3;
 }
 
-/* Burned Card Styles */
-.card--burned .card__back {
-  background: linear-gradient(135deg, #8b4513 0%, #a0522d 50%, #8b4513 100%);
-  border-color: #654321;
+/* Deck Card Styles - Solid facedown card with stacked depth effect */
+.card--deck {
+  position: relative;
+  opacity: 1 !important;
 }
 
-.card--burned .card__pattern {
-  background-image:
-    repeating-linear-gradient(45deg, rgba(139, 69, 19, 0.3) 0px, rgba(139, 69, 19, 0.3) 4px, transparent 4px, transparent 8px),
-    repeating-linear-gradient(-45deg, rgba(139, 69, 19, 0.3) 0px, rgba(139, 69, 19, 0.3) 4px, transparent 4px, transparent 8px);
+.card--deck .card__back {
+  background: linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 50%, #1a1a1a 100%);
+  border: 1px solid #666;
+  box-shadow: 
+    0 0 0 1px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 6px 12px rgba(0, 0, 0, 0.2),
+    0 8px 16px rgba(0, 0, 0, 0.1);
 }
+
+/* Create stacked deck effect using pseudo-elements */
+.card--deck::before,
+.card--deck::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 50%, #1a1a1a 100%);
+  border: 1px solid #666;
+  pointer-events: none;
+}
+
+.card--deck::before {
+  top: 2px;
+  left: 2px;
+  z-index: -1;
+  opacity: 0.6;
+  box-shadow: 
+    0 0 0 1px rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.card--deck::after {
+  top: 4px;
+  left: 4px;
+  z-index: -2;
+  opacity: 0.4;
+  box-shadow: 
+    0 0 0 1px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Burned Card Styles - Now uses standard facedown card style (card--hidden) */
 
 /* Card Dealing Animations */
 .card--dealing {

@@ -1,5 +1,5 @@
 // Test change for GitHub push capability - added by AI assistant
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Card from './components/Card';
 import PlayerArea from './components/PlayerArea';
 import { Deck, createDeck } from './game/deck';
@@ -77,6 +77,14 @@ function App() {
   const [gameLog, setGameLog] = useState<Array<{timestamp: Date, message: string}>>([]);
   const [aiCardsFlipping, setAiCardsFlipping] = useState<boolean>(false);
   const [lastPotWon, setLastPotWon] = useState<number>(0);
+  const logEntriesRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new log entries are added
+  useEffect(() => {
+    if (logEntriesRef.current) {
+      logEntriesRef.current.scrollTop = logEntriesRef.current.scrollHeight;
+    }
+  }, [gameLog]);
 
   // Start the game with initialization parameters
   const startGame = () => {
@@ -1200,11 +1208,11 @@ function App() {
             {/* Game Log Box - Grid Area: game-log */}
             <div className="game-log-box top-row-log">
               <h3>Game Log</h3>
-              <div className="log-entries">
+              <div className="log-entries" ref={logEntriesRef}>
                 {gameLog.length === 0 ? (
                   <div className="log-entry">Game started. Waiting for actions...</div>
                 ) : (
-                  gameLog.slice().reverse().map((entry, index) => (
+                  gameLog.map((entry, index) => (
                     <div key={index} className="log-entry">
                       <span className="log-time">{entry.timestamp.toLocaleTimeString()}</span>
                       <span className="log-message">{entry.message}</span>
@@ -1226,40 +1234,43 @@ function App() {
               <div className="community-cards">
                 <h3>Community Cards</h3>
                 <div className="cards-row">
-                  {communityCards.map((card, index) => {
-                    // Only show cards that should be visible in current phase
-                    const shouldShowCard = (
-                      (gamePhase === 'flop' && index < 3) ||
-                      (gamePhase === 'turn' && index < 4) ||
-                      (gamePhase === 'river' && index < 5) ||
-                      gamePhase === 'showdown'
-                    );
+                  {(() => {
+                    // Determine how many cards should be visible based on phase
+                    const maxCardsForPhase = 
+                      gamePhase === 'preflop' ? 0 :
+                      gamePhase === 'flop' ? 3 :
+                      gamePhase === 'turn' ? 4 :
+                      gamePhase === 'river' ? 5 :
+                      gamePhase === 'showdown' ? 5 : 0;
 
-                    return (
-                      <Card
-                        key={`community-${index}`}
-                        card={shouldShowCard ? card : null}
-                        isDealing={animatingCardIndices.includes(index)}
-                      />
-                    );
-                  })}
-                  {/* Show placeholder cards for unrevealed cards */}
-                  {gamePhase === 'preflop' && (
-                    <>
-                      <Card card={null} />
-                      <Card card={null} />
-                      <Card card={null} />
-                    </>
-                  )}
-                  {gamePhase === 'flop' && (
-                    <>
-                      <Card card={null} />
-                      <Card card={null} />
-                    </>
-                  )}
-                  {gamePhase === 'turn' && (
-                    <Card card={null} />
-                  )}
+                    // Always show exactly 5 card slots (max community cards)
+                    const totalSlots = 5;
+                    const cardsToRender = [];
+
+                    // Render actual cards up to the phase limit
+                    for (let i = 0; i < Math.min(communityCards.length, maxCardsForPhase); i++) {
+                      cardsToRender.push(
+                        <Card
+                          key={`community-${i}`}
+                          card={communityCards[i]}
+                          isDealing={animatingCardIndices.includes(i)}
+                        />
+                      );
+                    }
+
+                    // Render placeholder cards for remaining slots
+                    const remainingSlots = totalSlots - cardsToRender.length;
+                    for (let i = 0; i < remainingSlots; i++) {
+                      cardsToRender.push(
+                        <Card
+                          key={`placeholder-${i}`}
+                          card={null}
+                        />
+                      );
+                    }
+
+                    return cardsToRender;
+                  })()}
                 </div>
               </div>
 
@@ -1267,8 +1278,7 @@ function App() {
               <div className="deck-visual">
                 <h3>Deck</h3>
                 <div className="deck-cards">
-                  <Card card={null} />
-                  <div className="deck-count">{deck.getRemainingCards()}</div>
+                  <Card card={null} isDeck={true} />
                 </div>
               </div>
 

@@ -19,7 +19,7 @@
   --pot-height: 210px;
   --deck-width: 130px;
   --deck-height: 210px;
-  --community-cards-min-width: 420px;
+  --community-cards-min-width: 480px;
   --community-cards-height: 210px;
   --burned-cards-width: 280px;
   --burned-cards-height: 210px;
@@ -99,7 +99,7 @@
   grid-template-columns: var(--pot-width) minmax(var(--community-cards-min-width), 1fr) var(--deck-width) var(--burned-cards-width);
   grid-template-areas: "pot community-cards deck burned-cards";
   gap: var(--gap-small);
-  align-items: start;
+  align-items: stretch;
   justify-items: center;
   width: 100%;
 }
@@ -391,7 +391,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   width: 100%;
   max-width: var(--deck-width);
   height: var(--deck-height);
@@ -408,19 +408,11 @@
 }
 
 .deck-cards {
-  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-.deck-count {
-  position: absolute;
-  bottom: -25px;
-  color: #fff;
-  font-weight: bold;
-  font-size: 14px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  flex: 1;
+  width: 100%;
 }
 
 /* Community Cards - Grid Area */
@@ -436,6 +428,7 @@
   height: var(--community-cards-height);
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   box-sizing: border-box;
 }
 
@@ -454,9 +447,9 @@
   align-items: center;
   flex-wrap: nowrap;
   overflow: visible;
-  height: auto;
-  flex-shrink: 0;
-  gap: var(--gap-small);
+  flex: 1;
+  gap: 12px;
+  padding: 0 5px;
 }
 
 /* Burned Cards - Grid Area */
@@ -472,6 +465,7 @@
   height: var(--burned-cards-height);
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   box-sizing: border-box;
 }
 
@@ -551,8 +545,8 @@
   justify-content: center;
   align-items: center;
   flex-wrap: nowrap;
+  flex: 1;
   gap: var(--gap-small);
-  min-height: 120px;
 }
 
 /* Legacy players-section kept for compatibility but not used in new layout */
