@@ -389,6 +389,13 @@ function App() {
     }, 500);
   };
 
+  // Handler for closing showdown modal and starting next round
+  const handleShowdownModalClose = () => {
+    if (handComplete && !gameOver) {
+      startNextRound();
+    }
+  };
+
   // Function to transition to the next game phase
   const advanceGamePhase = () => {
     console.log('DEBUG: advanceGamePhase called, players at start:', players.map(p => ({ name: p.name, chips: p.chips })));
@@ -1377,9 +1384,40 @@ function App() {
           </div>
         </div>
 
-        {/* Showdown Display */}
-        {gamePhase === 'showdown' && (
-          <div className="showdown-display">
+
+        {/* AI Action Display - Always rendered to prevent layout shift */}
+        <div className={`ai-action-display ${aiActionDisplay ? 'visible' : 'hidden'}`}>
+          {aiActionDisplay && (
+            <div className="ai-action-content">
+              <div className="ai-avatar">🤖</div>
+              <div className="ai-action-text">
+                {aiActionDisplay.isThinking ? (
+                  <>
+                    <div className="thinking-text">AI is thinking...</div>
+                    <div className="thinking-dots">
+                      <span>.</span><span>.</span><span>.</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="action-text">
+                    AI {aiActionDisplay.action}
+                    {aiActionDisplay.amount !== undefined && aiActionDisplay.amount > 0 && (
+                      <span className="action-amount"> ${aiActionDisplay.amount}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+
+      </main>
+
+      {/* Showdown Modal */}
+      {gamePhase === 'showdown' && (
+        <div className="modal-backdrop" onClick={handleShowdownModalClose}>
+          <div className="showdown-modal" onClick={(e) => e.stopPropagation()}>
             {/* Show showdown hands and community cards only if showdownData exists */}
             {showdownData && (
               <>
@@ -1507,10 +1545,7 @@ function App() {
                   }
                   return handComplete && !gameOver && (
                     <button
-                      onClick={() => {
-                        console.log('DEBUG: Next Round button clicked, handComplete:', handComplete, 'gameOver:', gameOver, 'gamePhase:', gamePhase);
-                        startNextRound();
-                      }}
+                      onClick={handleShowdownModalClose}
                       className="deal-button next-round-button"
                     >
                       Next Round
@@ -1520,36 +1555,8 @@ function App() {
               </div>
             )}
           </div>
-        )}
-
-        {/* AI Action Display */}
-        {aiActionDisplay && (
-          <div className="ai-action-display">
-            <div className="ai-action-content">
-              <div className="ai-avatar">🤖</div>
-              <div className="ai-action-text">
-                {aiActionDisplay.isThinking ? (
-                  <>
-                    <div className="thinking-text">AI is thinking...</div>
-                    <div className="thinking-dots">
-                      <span>.</span><span>.</span><span>.</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="action-text">
-                    AI {aiActionDisplay.action}
-                    {aiActionDisplay.amount !== undefined && aiActionDisplay.amount > 0 && (
-                      <span className="action-amount"> ${aiActionDisplay.amount}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-
-      </main>
+        </div>
+      )}
     </div>
   );
 }
