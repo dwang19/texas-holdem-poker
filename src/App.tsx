@@ -73,7 +73,6 @@ function App() {
   const [aiActionDisplay, setAiActionDisplay] = useState<{action: string, amount?: number, isThinking: boolean} | null>(null);
   const [phaseAnnouncement, setPhaseAnnouncement] = useState<string | null>(null);
   const [playerLastActions, setPlayerLastActions] = useState<Record<string, string>>({});
-  const [actingPlayerId, setActingPlayerId] = useState<string | null>(null);
   const [gameLog, setGameLog] = useState<Array<{timestamp: Date, message: string}>>([]);
   const [aiCardsFlipping, setAiCardsFlipping] = useState<boolean>(false);
   const [lastPotWon, setLastPotWon] = useState<number>(0);
@@ -332,7 +331,6 @@ function App() {
     console.log('DEBUG: Setting handComplete to false in dealNewHand');
     setHandComplete(false);
     setPlayerLastActions({}); // Reset last actions for new hand
-    setActingPlayerId(null); // Clear acting player
     setShowdownData(null); // Clear showdown data
     setAiCardsFlipping(false); // Reset flip animation state
     setLastPotWon(0); // Reset last pot won
@@ -513,12 +511,18 @@ function App() {
 
           const dealNextFlopCard = () => {
             if (currentCardIndex < flopCards.length) {
-              // Add one card at a time
+              // Add one card at a time using functional update to get current length
               const cardToAdd = flopCards[currentCardIndex];
-              const cardIndex = communityCards.length + currentCardIndex;
-
-              setCommunityCards(prev => [...prev, cardToAdd]);
-              setAnimatingCardIndices([cardIndex]);
+              
+              setCommunityCards(prev => {
+                const newCards = [...prev, cardToAdd];
+                const cardIndex = prev.length;
+                // Set animation index after cards are added
+                setTimeout(() => {
+                  setAnimatingCardIndices([cardIndex]);
+                }, 10);
+                return newCards;
+              });
 
               currentCardIndex++;
 
@@ -526,7 +530,7 @@ function App() {
               setTimeout(() => {
                 setAnimatingCardIndices([]); // Clear animation for previous card
                 dealNextFlopCard(); // Deal next card
-              }, 600); // 600ms delay between each flop card
+              }, 900); // 900ms delay to allow animation to complete
             } else {
               // All flop cards dealt, complete the phase transition
               setTimeout(() => {
@@ -564,9 +568,15 @@ function App() {
           setTimeout(dealNextFlopCard, 300);
         } else {
           // Turn/River: Deal single card with animation
-          setCommunityCards(newCommunityCards);
-          const startIndex = communityCards.length;
-          setAnimatingCardIndices([startIndex]);
+          // Use functional update to get the correct index
+          setCommunityCards(prev => {
+            const cardIndex = prev.length;
+            // Set animation index after card is added
+            setTimeout(() => {
+              setAnimatingCardIndices([cardIndex]);
+            }, 10);
+            return newCommunityCards;
+          });
 
           // Complete the phase transition after animation
           setTimeout(() => {
@@ -701,13 +711,9 @@ function App() {
   const handleBettingAction = (action: 'fold' | 'call' | 'raise') => {
     const currentPlayer = players[currentPlayerIndex];
 
-    // Set acting player indicator
-    setActingPlayerId(currentPlayer.id);
-
     // Basic validation - only human player can trigger actions and only when it's their turn
     if (!currentPlayer || !currentPlayer.isHuman) {
       console.warn('Invalid action: Only human player can perform actions');
-      setActingPlayerId(null);
       return;
     }
 
@@ -810,11 +816,6 @@ function App() {
     setPot(newPot);
     setCurrentBet(newCurrentBet);
 
-    // Clear acting player indicator after a short delay
-    setTimeout(() => {
-      setActingPlayerId(null);
-    }, 500);
-
     // Check if betting round is complete
     const bettingRoundComplete = isBettingRoundComplete(newPlayers, newCurrentBet);
     const activePlayers = newPlayers.filter(p => !p.hasFolded);
@@ -891,9 +892,6 @@ function App() {
 
     // If next player is AI, let AI make decision
     if (nextPlayerIndex !== -1 && !newPlayers[nextPlayerIndex].isHuman && !newPlayers[nextPlayerIndex].hasFolded) {
-      // Set acting player indicator
-      setActingPlayerId(newPlayers[nextPlayerIndex].id);
-
       // Show AI thinking animation
       setAiActionDisplay({ action: '', isThinking: true });
 
@@ -998,10 +996,9 @@ function App() {
         setCurrentBet(updatedCurrentBet);
         setPlayers(updatedPlayers);
 
-        // Clear AI action display and acting player indicator after a delay
+        // Clear AI action display after a delay
         setTimeout(() => {
           setAiActionDisplay(null);
-          setActingPlayerId(null);
         }, 2500);
 
         // Check again if betting round is now complete after AI action
@@ -1196,7 +1193,6 @@ function App() {
                       isCurrentPlayer={playerIndex === currentPlayerIndex}
                       gamePhase={gamePhase}
                       holeCardAnimating={holeCardAnimating}
-                      isActing={actingPlayerId === player.id}
                       lastAction={playerLastActions[player.id]}
                       aiCardsFlipping={aiCardsFlipping}
                     />
@@ -1236,7 +1232,9 @@ function App() {
                 <div className="cards-row">
                   {(() => {
                     // Determine how many cards should be visible based on phase
+                    // During dealing (isDealing=true), show all cards currently in communityCards array
                     const maxCardsForPhase = 
+                      isDealing ? communityCards.length :
                       gamePhase === 'preflop' ? 0 :
                       gamePhase === 'flop' ? 3 :
                       gamePhase === 'turn' ? 4 :
@@ -1247,7 +1245,7 @@ function App() {
                     const totalSlots = 5;
                     const cardsToRender = [];
 
-                    // Render actual cards up to the phase limit
+                    // Render actual cards up to the phase limit (or all cards if dealing)
                     for (let i = 0; i < Math.min(communityCards.length, maxCardsForPhase); i++) {
                       cardsToRender.push(
                         <Card
@@ -1313,7 +1311,6 @@ function App() {
                     isCurrentPlayer={playerIndex === currentPlayerIndex}
                     gamePhase={gamePhase}
                     holeCardAnimating={holeCardAnimating}
-                    isActing={actingPlayerId === player.id}
                     lastAction={playerLastActions[player.id]}
                   />
                 );

@@ -2,11 +2,18 @@
   display: inline-block;
   position: relative;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   transition: transform 0.3s ease, box-shadow 0.2s ease, opacity 0.3s ease;
   font-family: 'Arial', sans-serif;
   flex-shrink: 0;
   margin: 0;
+  isolation: isolate;
+  box-sizing: border-box;
+}
+
+.card__front,
+.card__back {
+  box-sizing: border-box;
 }
 
 .card:hover {
@@ -111,13 +118,15 @@
 }
 
 /* Hidden/Empty Card States */
-.card--hidden .card__back,
-.card--empty .card__back {
-  background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
-}
-
+/* Hidden cards now use the same cardback as deck (inherits from .card__back) */
 .card--empty {
   opacity: 0.3;
+}
+
+.card--empty .card__back {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+  width: 100%;
+  height: 100%;
 }
 
 /* Deck Card Styles - Solid facedown card with stacked depth effect */
@@ -138,6 +147,7 @@
 }
 
 /* Create stacked deck effect using pseudo-elements */
+/* Stack extends upward to maintain card alignment */
 .card--deck::before,
 .card--deck::after {
   content: '';
@@ -151,7 +161,7 @@
 }
 
 .card--deck::before {
-  top: 2px;
+  top: -2px;
   left: 2px;
   z-index: -1;
   opacity: 0.6;
@@ -161,7 +171,7 @@
 }
 
 .card--deck::after {
-  top: 4px;
+  top: -4px;
   left: 4px;
   z-index: -2;
   opacity: 0.4;

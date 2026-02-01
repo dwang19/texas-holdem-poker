@@ -8,7 +8,6 @@ interface PlayerAreaProps {
   isCurrentPlayer?: boolean;
   gamePhase?: 'waiting' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown';
   holeCardAnimating?: boolean;
-  isActing?: boolean;
   lastAction?: string;
   aiCardsFlipping?: boolean;
 }
@@ -18,7 +17,6 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
   isCurrentPlayer = false,
   gamePhase = 'waiting',
   holeCardAnimating = false,
-  isActing = false,
   lastAction = '',
   aiCardsFlipping = false
 }) => {
@@ -33,20 +31,12 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
   const positionIndicators = getPositionIndicators();
 
   return (
-    <div className={`player-area ${player.hasFolded ? 'folded' : ''} ${isCurrentPlayer ? 'current-player' : ''} ${isActing ? 'acting-player' : ''}`}>
+    <div className={`player-area ${player.hasFolded ? 'folded' : ''} ${isCurrentPlayer ? 'current-player' : ''}`}>
       {/* Turn Indicator Badge */}
       {isCurrentPlayer && !player.hasFolded && (
         <div className="turn-indicator">
           <div className="turn-arrow">⬇</div>
           <div className="turn-text">TURN</div>
-        </div>
-      )}
-
-      {/* Action Indicator */}
-      {isActing && (
-        <div className="action-indicator">
-          <div className="action-icon">⚡</div>
-          <div className="action-text">ACTING</div>
         </div>
       )}
 
@@ -77,12 +67,10 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
             <span className="bet-amount">${player.currentBet}</span>
           </div>
         )}
-        {lastAction && (
-          <div className="last-action">
-            <span className="action-label">Last:</span>
-            <span className="action-value">{lastAction}</span>
-          </div>
-        )}
+        <div className={`last-action ${lastAction ? '' : 'hidden'}`}>
+          <span className="action-label">Last:</span>
+          <span className="action-value">{lastAction || '\u00A0'}</span>
+        </div>
       </div>
 
       <div className="player-cards">
