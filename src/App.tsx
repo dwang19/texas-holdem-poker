@@ -208,10 +208,10 @@ function App() {
       message: `${remainingPlayer.name} wins $${potAmount} - opponent folded` 
     }]);
 
-    // Check for bust condition
-    const bustedPlayers = updatedPlayers.filter(p => p.chips <= 0);
+    // Check for bust condition - player cannot afford big blind ($10)
+    const bustedPlayers = updatedPlayers.filter(p => p.chips < 10);
     if (bustedPlayers.length > 0) {
-      const remainingPlayers = updatedPlayers.filter(p => p.chips > 0);
+      const remainingPlayers = updatedPlayers.filter(p => p.chips >= 10);
       const gameWinner = remainingPlayers[0];
       setOverallWinner(gameWinner);
       setGameOver(true);
@@ -357,11 +357,11 @@ function App() {
       setGameLog(prev => [...prev, { timestamp: new Date(), message: `${winningPlayer!.name} wins $${potAmount} with ${winningHandDesc}` }]);
     }
 
-    // Check for bust condition (player with $0 chips) - happens in both cases
-    const bustedPlayers = updatedPlayers.filter(p => p.chips <= 0);
+    // Check for bust condition (player cannot afford big blind $10) - happens in both cases
+    const bustedPlayers = updatedPlayers.filter(p => p.chips < 10);
     if (bustedPlayers.length > 0) {
       // Game over - one player has gone bust
-      const remainingPlayers = updatedPlayers.filter(p => p.chips > 0);
+      const remainingPlayers = updatedPlayers.filter(p => p.chips >= 10);
       const gameWinner = remainingPlayers[0]; // Should only be one remaining player
       setOverallWinner(gameWinner);
       setGameOver(true);
@@ -1214,157 +1214,6 @@ function App() {
     // Continue betting round - move to next player
     const nextPlayerIndex = getNextActivePlayerIndex(newPlayers, currentPlayerIndex);
     setCurrentPlayerIndex(nextPlayerIndex);
-
-    // If next player is AI, let AI make decision
-    if (nextPlayerIndex !== -1 && !newPlayers[nextPlayerIndex].isHuman && !newPlayers[nextPlayerIndex].hasFolded) {
-      // Show AI thinking animation
-      setAiActionDisplay({ action: '', isThinking: true });
-
-      setTimeout(() => {
-        // AI makes strategic decision
-        const aiPlayer = newPlayers[nextPlayerIndex];
-        const activePlayersCount = newPlayers.filter(p => !p.hasFolded).length;
-
-        const aiDecision = getAIDecision(
-          aiPlayer,
-          communityCards,
-          newCurrentBet,
-          newPot,
-          gamePhase,
-          activePlayersCount,
-          aiPersonality
-        );
-
-        let aiBetAmount = 0;
-        let updatedPlayers = [...newPlayers];
-        let updatedPot = newPot;
-        let updatedCurrentBet = newCurrentBet;
-
-        // Track AI action text
-        let aiActionText = '';
-
-        switch (aiDecision.action) {
-          case 'fold':
-            updatedPlayers[nextPlayerIndex] = {
-              ...aiPlayer,
-              hasFolded: true,
-              hasActedThisRound: true,
-            };
-            setAiActionDisplay({ action: 'folds', isThinking: false });
-            aiActionText = 'Fold';
-            break;
-
-          case 'call':
-            aiBetAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
-            if (aiPlayer.chips >= aiBetAmount) {
-              updatedPlayers[nextPlayerIndex] = {
-                ...aiPlayer,
-                chips: Math.max(0, aiPlayer.chips - aiBetAmount),
-                currentBet: aiPlayer.currentBet + aiBetAmount,
-                hasActedThisRound: true,
-              };
-              updatedPot += aiBetAmount;
-              setAiActionDisplay({ action: aiBetAmount === 0 ? 'checks' : 'calls', amount: aiBetAmount, isThinking: false });
-              aiActionText = aiBetAmount === 0 ? 'Check' : `Call $${aiBetAmount}`;
-            }
-            break;
-
-          case 'raise':
-            const raiseAmount = aiDecision.amount || 0;
-            const callAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
-            const totalRaiseAmount = callAmount + raiseAmount;
-
-            if (aiPlayer.chips >= totalRaiseAmount) {
-              updatedPlayers[nextPlayerIndex] = {
-                ...aiPlayer,
-                chips: Math.max(0, aiPlayer.chips - totalRaiseAmount),
-                currentBet: aiPlayer.currentBet + totalRaiseAmount,
-                hasActedThisRound: true,
-              };
-              // When AI raises, it starts a new betting round - reset hasActedThisRound for all other players
-              updatedPlayers = updatedPlayers.map((player, index) => ({
-                ...player,
-                hasActedThisRound: index === nextPlayerIndex ? true : false, // Only the AI raiser has acted
-              }));
-              updatedPot += totalRaiseAmount;
-              updatedCurrentBet = aiPlayer.currentBet + totalRaiseAmount;
-              setAiActionDisplay({ action: 'raises', amount: totalRaiseAmount, isThinking: false });
-              aiActionText = `Raise $${totalRaiseAmount}`;
-            } else {
-              // If can't raise the full amount, just call
-              const fallbackCallAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
-              if (aiPlayer.chips >= fallbackCallAmount) {
-                updatedPlayers[nextPlayerIndex] = {
-                  ...aiPlayer,
-                  chips: Math.max(0, aiPlayer.chips - fallbackCallAmount),
-                  currentBet: aiPlayer.currentBet + fallbackCallAmount,
-                  hasActedThisRound: true,
-                };
-                updatedPot += fallbackCallAmount;
-                setAiActionDisplay({ action: 'calls', amount: fallbackCallAmount, isThinking: false });
-                aiActionText = `Call $${fallbackCallAmount}`;
-              }
-            }
-            break;
-        }
-
-        // Update last action for AI player
-        setPlayerLastActions(prev => ({
-          ...prev,
-          [aiPlayer.id]: aiActionText
-        }));
-
-        // Add to game log
-        setGameLog(prev => [...prev, { timestamp: new Date(), message: `AI Player ${aiActionText.toLowerCase()}` }]);
-
-        setPot(updatedPot);
-        setCurrentBet(updatedCurrentBet);
-        setPlayers(updatedPlayers);
-
-        // Clear AI action display after a delay
-        setTimeout(() => {
-          setAiActionDisplay(null);
-        }, 2500);
-
-        // Check again if betting round is now complete after AI action
-        const aiBettingRoundComplete = isBettingRoundComplete(updatedPlayers, updatedCurrentBet);
-        const aiActivePlayers = updatedPlayers.filter(p => !p.hasFolded);
-
-        // If AI folded and only one player remains, award pot immediately (no showdown, no card reveal)
-        if (aiDecision.action === 'fold' && aiActivePlayers.length === 1) {
-          console.log('DEBUG: AI folded, awarding pot to remaining player');
-          setCurrentPlayerIndex(-1);
-          setTimeout(() => {
-            // Use the values we have to avoid stale closure
-            const remainingPlayer = aiActivePlayers[0];
-            const potToAward = updatedPot;
-            handleFoldWinWithPot(remainingPlayer, potToAward, updatedPlayers);
-          }, 500);
-          return;
-        }
-
-        if (aiActivePlayers.length <= 1) {
-          // Only one player left (not due to fold) - award pot
-          console.log('DEBUG: AI action - only one player left');
-          setCurrentPlayerIndex(-1);
-          setTimeout(() => {
-            // Use the values we have to avoid stale closure
-            const remainingPlayer = aiActivePlayers[0];
-            const potToAward = updatedPot;
-            handleFoldWinWithPot(remainingPlayer, potToAward, updatedPlayers);
-          }, 500);
-        } else if (aiBettingRoundComplete) {
-          // Advance to next phase
-          setTimeout(() => {
-            advanceGamePhase();
-          }, 1000);
-        } else {
-          // Continue to next player
-          const nextAiPlayerIndex = getNextActivePlayerIndex(updatedPlayers, nextPlayerIndex);
-          setCurrentPlayerIndex(nextAiPlayerIndex);
-        }
-      }, 1500); // Longer delay for AI decision
-    }
   };
 
   // Show initialization screen if game hasn't started
@@ -1421,8 +1270,8 @@ function App() {
                 <ul>
                   <li>Each player starts with $100</li>
                   <li>Small Blind: $5, Big Blind: $10</li>
-                  <li>Play continues until one player loses all chips</li>
                   <li>Blind positions alternate each round</li>
+                  <li>Play continues until one player cannot afford the big blind ($10)</li>
                 </ul>
               </div>
 
