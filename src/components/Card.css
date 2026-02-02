@@ -382,6 +382,39 @@
   }
 }
 
+/* Raised Card Animation - For community cards on hover */
+.card--raised {
+  transform: translateY(-20px) scale(1.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  z-index: 20;
+}
+
+/* Dimmed Card - For unused hole cards during hover */
+.card--dimmed {
+  opacity: 0.4;
+  filter: grayscale(50%);
+  transform: scale(0.95);
+  transition: all 0.3s ease;
+}
+
+.card--dimmed:hover {
+  transform: scale(0.95);
+}
+
+/* Showdown Glow Animation */
+.card--showdown-glow {
+  animation: showdownGlow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes showdownGlow {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.3);
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .card--large {

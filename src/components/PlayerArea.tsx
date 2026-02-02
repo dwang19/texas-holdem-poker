@@ -10,6 +10,11 @@ interface PlayerAreaProps {
   holeCardAnimating?: boolean;
   lastAction?: string;
   aiCardsFlipping?: boolean;
+  isShowdown?: boolean;
+  onHandHover?: () => void;
+  onHandLeave?: () => void;
+  usedHoleCardIndices?: number[];
+  isHovered?: boolean;
 }
 
 const PlayerArea: React.FC<PlayerAreaProps> = ({
@@ -18,7 +23,12 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
   gamePhase = 'waiting',
   holeCardAnimating = false,
   lastAction = '',
-  aiCardsFlipping = false
+  aiCardsFlipping = false,
+  isShowdown = false,
+  onHandHover,
+  onHandLeave,
+  usedHoleCardIndices = [],
+  isHovered = false
 }) => {
   const getPositionIndicators = () => {
     const indicators = [];
@@ -73,12 +83,21 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
         </div>
       </div>
 
-      <div className="player-cards">
+      <div 
+        className={`player-cards ${isShowdown ? 'showdown-cards' : ''}`}
+        onMouseEnter={isShowdown && !player.hasFolded ? onHandHover : undefined}
+        onMouseLeave={isShowdown && !player.hasFolded ? onHandLeave : undefined}
+      >
         <div className="cards-row">
           {player.cards.map((card, index) => {
             // For AI cards during showdown flip, show as hidden initially, then flip
             const shouldFlip = !player.isHuman && aiCardsFlipping && gamePhase === 'showdown' && !player.hasFolded;
             const shouldHide = (!player.isHuman && gamePhase !== 'showdown' && !shouldFlip) || player.hasFolded;
+            
+            // During showdown, determine if this card is used in the best hand
+            const isUsedInHand = isShowdown && usedHoleCardIndices.includes(index);
+            const shouldGlow = isShowdown && !player.hasFolded;
+            const isDimmed = isShowdown && isHovered && !isUsedInHand;
             
             // Debug logging for AI player cards
             if (!player.isHuman && gamePhase === 'showdown') {
@@ -93,6 +112,9 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
                 size="medium"
                 isDealing={holeCardAnimating}
                 isFlipping={shouldFlip}
+                isHighlighted={shouldGlow && !isDimmed}
+                highlightColor={player.isHuman ? 'green' : 'blue'}
+                className={isDimmed ? 'card--dimmed' : ''}
               />
             );
           })}

@@ -77,6 +77,7 @@ function App() {
   const [aiCardsFlipping, setAiCardsFlipping] = useState<boolean>(false);
   const [lastPotWon, setLastPotWon] = useState<number>(0);
   const logEntriesRef = useRef<HTMLDivElement>(null);
+  const [hoveredPlayerHand, setHoveredPlayerHand] = useState<'human' | 'ai' | null>(null);
 
   // Auto-scroll to bottom when new log entries are added
   useEffect(() => {
@@ -394,6 +395,26 @@ function App() {
     if (handComplete && !gameOver) {
       startNextRound();
     }
+  };
+
+  // Helper function to get indices of community cards used in a player's best hand
+  const getUsedCommunityCardIndices = (pokerHand: PokerHand | undefined, commCards: CardType[]): number[] => {
+    if (!pokerHand) return [];
+    return commCards
+      .map((cc, idx) =>
+        pokerHand.cards.some(hc => hc.rank === cc.rank && hc.suit === cc.suit) ? idx : -1
+      )
+      .filter(idx => idx !== -1);
+  };
+
+  // Helper function to get indices of hole cards used in a player's best hand
+  const getUsedHoleCardIndices = (pokerHand: PokerHand | undefined, holeCards: CardType[]): number[] => {
+    if (!pokerHand) return [];
+    return holeCards
+      .map((hc, idx) =>
+        pokerHand.cards.some(pc => pc.rank === hc.rank && pc.suit === hc.suit) ? idx : -1
+      )
+      .filter(idx => idx !== -1);
   };
 
   // Function to transition to the next game phase
@@ -1164,7 +1185,7 @@ function App() {
         <h1>Texas Hold'em Poker</h1>
       </header>
 
-      <main className="game-container">
+      <main className={`game-container ${gamePhase === 'showdown' ? 'showdown-active' : ''}`}>
         {/* Main Layout */}
         <div className="main-game-layout">
           {/* Center Section: Game Info + AI Player, Cards Row, Human Player */}
@@ -1193,6 +1214,8 @@ function App() {
               <div className="ai-player-section">
                 {players.filter(p => !p.isHuman).map((player, index) => {
                   const playerIndex = players.findIndex(p => p.id === player.id);
+                  const aiHandData = showdownData?.hands.find(h => !h.player.isHuman);
+                  const aiUsedHoleCardIndices = getUsedHoleCardIndices(aiHandData?.pokerHand, player.cards);
                   return (
                     <PlayerArea
                       key={player.id}
@@ -1202,6 +1225,11 @@ function App() {
                       holeCardAnimating={holeCardAnimating}
                       lastAction={playerLastActions[player.id]}
                       aiCardsFlipping={aiCardsFlipping}
+                      isShowdown={gamePhase === 'showdown'}
+                      onHandHover={() => setHoveredPlayerHand('ai')}
+                      onHandLeave={() => setHoveredPlayerHand(null)}
+                      usedHoleCardIndices={aiUsedHoleCardIndices}
+                      isHovered={hoveredPlayerHand === 'ai'}
                     />
                   );
                 })}
@@ -1252,13 +1280,27 @@ function App() {
                     const totalSlots = 5;
                     const cardsToRender = [];
 
+                    // Get the used community card indices for the hovered player
+                    const hoveredHandData = hoveredPlayerHand 
+                      ? showdownData?.hands.find(h => h.player.isHuman === (hoveredPlayerHand === 'human'))
+                      : null;
+                    const hoveredUsedCommunityIndices = hoveredHandData 
+                      ? getUsedCommunityCardIndices(hoveredHandData.pokerHand, communityCards)
+                      : [];
+
                     // Render actual cards up to the phase limit (or all cards if dealing)
                     for (let i = 0; i < Math.min(communityCards.length, maxCardsForPhase); i++) {
+                      const isHighlightedByHover = gamePhase === 'showdown' && hoveredPlayerHand && hoveredUsedCommunityIndices.includes(i);
+                      const shouldRaise = isHighlightedByHover;
+                      
                       cardsToRender.push(
                         <Card
                           key={`community-${i}`}
                           card={communityCards[i]}
                           isDealing={animatingCardIndices.includes(i)}
+                          isHighlighted={isHighlightedByHover || false}
+                          highlightColor={hoveredPlayerHand === 'human' ? 'green' : 'blue'}
+                          className={shouldRaise ? 'card--raised' : ''}
                         />
                       );
                     }
@@ -1311,6 +1353,8 @@ function App() {
             <div className="human-player-section">
               {players.filter(p => p.isHuman).map((player, index) => {
                 const playerIndex = players.findIndex(p => p.id === player.id);
+                const humanHandData = showdownData?.hands.find(h => h.player.isHuman);
+                const humanUsedHoleCardIndices = getUsedHoleCardIndices(humanHandData?.pokerHand, player.cards);
                 return (
                   <PlayerArea
                     key={player.id}
@@ -1319,6 +1363,11 @@ function App() {
                     gamePhase={gamePhase}
                     holeCardAnimating={holeCardAnimating}
                     lastAction={playerLastActions[player.id]}
+                    isShowdown={gamePhase === 'showdown'}
+                    onHandHover={() => setHoveredPlayerHand('human')}
+                    onHandLeave={() => setHoveredPlayerHand(null)}
+                    usedHoleCardIndices={humanUsedHoleCardIndices}
+                    isHovered={hoveredPlayerHand === 'human'}
                   />
                 );
               })}
@@ -1385,9 +1434,51 @@ function App() {
         </div>
 
 
-        {/* AI Action Display - Always rendered to prevent layout shift */}
-        <div className={`ai-action-display ${aiActionDisplay ? 'visible' : 'hidden'}`}>
-          {aiActionDisplay && (
+        {/* Status Container - Shows AI actions during play, showdown results during showdown */}
+        <div className={`status-container ${gamePhase === 'showdown' ? 'showdown-active' : ''} ${aiActionDisplay || gamePhase === 'showdown' ? 'visible' : 'hidden'}`}>
+          {gamePhase === 'showdown' && winner ? (
+            <div className="showdown-status-content">
+              <div className="showdown-winner-info">
+                <span className="winner-crown">👑</span>
+                <span className="winner-name">{winner.name} wins!</span>
+                <span className="winner-amount">${showdownData?.potAmount || lastPotWon}</span>
+              </div>
+              {showdownData && showdownData.hands.length > 1 ? (
+                <div className="showdown-comparison">
+                  {(() => {
+                    const winnerHand = showdownData.hands.find(h => h.isWinner);
+                    const loserHand = showdownData.hands.find(h => !h.isWinner);
+                    if (winnerHand && loserHand) {
+                      return (
+                        <span className="comparison-text">
+                          <span className={winnerHand.player.isHuman ? 'human-text' : 'ai-text'}>
+                            {winnerHand.pokerHand.description}
+                          </span>
+                          {' beats '}
+                          <span className={loserHand.player.isHuman ? 'human-text' : 'ai-text'}>
+                            {loserHand.pokerHand.description}
+                          </span>
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              ) : (
+                <div className="showdown-comparison">
+                  <span className="comparison-text">Opponent folded</span>
+                </div>
+              )}
+              {handComplete && !gameOver && (
+                <button
+                  onClick={handleShowdownModalClose}
+                  className="next-round-btn"
+                >
+                  Next Round
+                </button>
+              )}
+            </div>
+          ) : aiActionDisplay ? (
             <div className="ai-action-content">
               <div className="ai-avatar">🤖</div>
               <div className="ai-action-text">
@@ -1408,155 +1499,12 @@ function App() {
                 )}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
 
       </main>
 
-      {/* Showdown Modal */}
-      {gamePhase === 'showdown' && (
-        <div className="modal-backdrop" onClick={handleShowdownModalClose}>
-          <div className="showdown-modal" onClick={(e) => e.stopPropagation()}>
-            {/* Show showdown hands and community cards only if showdownData exists */}
-            {showdownData && (
-              <>
-                <h3>Showdown Results</h3>
-                <div className="showdown-hands">
-                  {showdownData.hands.map((handData, index) => (
-                    <div key={handData.player.id} className={`showdown-hand ${handData.player.isHuman ? 'human-hand' : 'ai-hand'} ${handData.isWinner ? 'winner' : ''}`}>
-                      <div className="showdown-player-name">
-                        {handData.player.name}
-                        {handData.isWinner && <span className="winner-crown">👑</span>}
-                      </div>
-                      <div className="showdown-hand-description">
-                        {handData.pokerHand.description}
-                      </div>
-                      <div className="showdown-cards">
-                        {handData.pokerHand.cards.map((card, cardIndex) => (
-                          <Card
-                            key={`showdown-${handData.player.id}-${cardIndex}`}
-                            card={card}
-                            isHighlighted={handData.isWinner}
-                            highlightColor={handData.player.isHuman ? 'green' : 'blue'}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Enhanced Community Cards with Edge Highlighting */}
-                <div className="showdown-community-usage">
-                  <h4>Community Cards Used in Winning Hands</h4>
-                  <div className="community-usage-cards">
-                    {communityCards.map((card, index) => {
-                      const isUsedByHuman = showdownData.hands.find(h => h.player.isHuman)?.pokerHand.cards.some(
-                        handCard => handCard.rank === card.rank && handCard.suit === card.suit
-                      );
-                      const isUsedByAI = showdownData.hands.find(h => !h.player.isHuman)?.pokerHand.cards.some(
-                        handCard => handCard.rank === card.rank && handCard.suit === card.suit
-                      );
-
-                      // Determine edge highlighting
-                      let edgeHighlight: 'top' | 'bottom' | 'both' | undefined;
-                      let edgeHighlightColor: 'green' | 'blue' | undefined;
-
-                      if (isUsedByHuman && isUsedByAI) {
-                        edgeHighlight = 'both';
-                        edgeHighlightColor = 'green'; // Show green on bottom, blue on top
-                      } else if (isUsedByHuman) {
-                        edgeHighlight = 'bottom';
-                        edgeHighlightColor = 'green';
-                      } else if (isUsedByAI) {
-                        edgeHighlight = 'top';
-                        edgeHighlightColor = 'blue';
-                      }
-
-                      return (
-                        <div key={`usage-${index}`} className="community-card-usage">
-                          <Card
-                            card={card}
-                            edgeHighlight={edgeHighlight}
-                            edgeHighlightColor={edgeHighlightColor}
-                          />
-                          <div className="usage-indicators">
-                            {isUsedByHuman && <div className="usage-human">Human</div>}
-                            {isUsedByAI && <div className="usage-ai">AI</div>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Enhanced Winner Announcement with Color-Coded Hand Comparison */}
-            {winner && (
-              <div className={`winner-announcement ${winner.isHuman ? 'human-winner' : 'ai-winner'}`}>
-                <h2 className="round-winner-title">
-                  🏆 Round Winner: {winner.name} 🏆
-                </h2>
-                {showdownData ? (
-                  <>
-                    <h3 className="pot-won-amount">
-                      Wins ${showdownData.potAmount}!
-                    </h3>
-                    {showdownData.hands.length > 1 && (
-                      <div className="hand-comparison">
-                        <div className="comparison-header">Hand Comparison:</div>
-                        {(() => {
-                          const winnerHand = showdownData.hands.find(h => h.isWinner);
-                          const loserHand = showdownData.hands.find(h => !h.isWinner);
-
-                          if (winnerHand && loserHand) {
-                            return (
-                              <div className="comparison-content">
-                                <div className={`hand-result winning-hand ${winnerHand.player.isHuman ? 'human-text' : 'ai-text'}`}>
-                                  <div className="hand-player-name">{winnerHand.player.name}:</div>
-                                  <div className="hand-type">{winnerHand.pokerHand.description}</div>
-                                </div>
-                                <div className="vs-divider">
-                                  <span className="vs-text">BEATS</span>
-                                </div>
-                                <div className={`hand-result losing-hand ${loserHand.player.isHuman ? 'human-text' : 'ai-text'}`}>
-                                  <div className="hand-player-name">{loserHand.player.name}:</div>
-                                  <div className="hand-type">{loserHand.pokerHand.description}</div>
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <h3 className="pot-won-amount">
-                    Wins ${lastPotWon} - Opponent folded
-                  </h3>
-                )}
-                {/* Next Round Button */}
-                {(() => {
-                  // Debug logging for Next Round button visibility
-                  if (gamePhase === 'showdown') {
-                    console.log('DEBUG: Next Round button check - handComplete:', handComplete, 'gameOver:', gameOver, 'winner:', winner?.name || 'null');
-                  }
-                  return handComplete && !gameOver && (
-                    <button
-                      onClick={handleShowdownModalClose}
-                      className="deal-button next-round-button"
-                    >
-                      Next Round
-                    </button>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

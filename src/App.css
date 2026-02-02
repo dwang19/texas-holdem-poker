@@ -57,6 +57,27 @@
   gap: var(--gap-medium);
 }
 
+/* Showdown Dim Overlay */
+.game-container.showdown-active::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 50;
+  pointer-events: none;
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Elements that should appear above the dim overlay during showdown */
+.game-container.showdown-active .player-cards,
+.game-container.showdown-active .community-cards .cards-row {
+  position: relative;
+  z-index: 100;
+}
+
 /* Main Game Layout */
 .main-game-layout {
   display: flex;
@@ -1190,8 +1211,8 @@
   }
 }
 
-/* AI Action Display */
-.ai-action-display {
+/* Status Container (AI Actions and Showdown Results) */
+.status-container {
   margin: var(--gap-large) 0;
   padding: var(--gap-medium);
   background: rgba(255, 255, 255, 0.1);
@@ -1203,15 +1224,126 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 200;
+  transition: all 0.3s ease;
 }
 
-.ai-action-display.hidden {
+.status-container.hidden {
   visibility: hidden;
 }
 
-.ai-action-display.visible {
+.status-container.visible {
   visibility: visible;
   animation: aiActionSlideIn 0.5s ease-out;
+}
+
+/* Enhanced Status Container during Showdown */
+.status-container.showdown-active {
+  border: 3px solid rgba(255, 215, 0, 0.8);
+  box-shadow: 
+    0 0 30px rgba(255, 215, 0, 0.4),
+    0 8px 32px rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.85);
+  animation: showdownStatusGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes showdownStatusGlow {
+  0% {
+    box-shadow: 
+      0 0 30px rgba(255, 215, 0, 0.4),
+      0 8px 32px rgba(0, 0, 0, 0.2);
+  }
+  100% {
+    box-shadow: 
+      0 0 50px rgba(255, 215, 0, 0.6),
+      0 8px 32px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Showdown Status Content */
+.showdown-status-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-large);
+  flex-wrap: wrap;
+  padding: var(--gap-small) 0;
+}
+
+.showdown-winner-info {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-medium);
+}
+
+.showdown-winner-info .winner-crown {
+  font-size: 28px;
+  animation: crownBounce 1s ease-in-out infinite;
+}
+
+@keyframes crownBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.showdown-winner-info .winner-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.showdown-winner-info .winner-amount {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.showdown-comparison {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+}
+
+.showdown-comparison .comparison-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.showdown-comparison .human-text {
+  color: #22c55e;
+  font-weight: bold;
+}
+
+.showdown-comparison .ai-text {
+  color: #3b82f6;
+  font-weight: bold;
+}
+
+.next-round-btn {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.next-round-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
+.next-round-btn:active {
+  transform: translateY(0);
 }
 
 .ai-action-content {
