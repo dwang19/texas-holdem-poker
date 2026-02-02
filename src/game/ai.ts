@@ -581,9 +581,22 @@ export class PokerAI {
                                  this.personality === 'conservative' ? 0.7 : 1.0;
 
     const targetRaise = callAmount * raiseMultiplier * personalityMultiplier;
-    const finalRaise = Math.max(minRaise, Math.min(maxRaise, targetRaise));
+    let finalRaise = Math.max(minRaise, Math.min(maxRaise, targetRaise));
 
-    return Math.floor(finalRaise);
+    // Round to nearest $5 increment, same as human player
+    finalRaise = Math.ceil(finalRaise / 5) * 5;
+
+    // Ensure we still meet minimum raise requirements after rounding
+    finalRaise = Math.max(minRaise, finalRaise);
+
+    // If rounding made it exceed maxRaise, use maxRaise but still round down to $5
+    if (finalRaise > maxRaise) {
+      finalRaise = Math.floor(maxRaise / 5) * 5;
+      // Ensure we still meet minimum requirements
+      finalRaise = Math.max(minRaise, finalRaise);
+    }
+
+    return finalRaise;
   }
 
   /**
