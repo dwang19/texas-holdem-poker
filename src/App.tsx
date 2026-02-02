@@ -1699,7 +1699,7 @@ function App() {
                       disabled={!isPlayerTurn || !callValidation.valid}
                       title={!callValidation.valid ? callValidation.reason : undefined}
                     >
-                      Call ${callValidation.callAmount || 0}
+                      {callValidation.callAmount === 0 ? 'Check' : `Call $${callValidation.callAmount}`}
                     </button>
                     <div className="raise-section">
                       <div className="raise-input-wrapper">
