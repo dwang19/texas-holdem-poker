@@ -158,12 +158,13 @@
 .position-badge {
   background: linear-gradient(135deg, #2ed573 0%, #1e90ff 100%);
   color: white;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 8px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: bold;
   text-transform: uppercase;
   box-shadow: 0 2px 8px rgba(46, 213, 115, 0.3);
+  white-space: nowrap;
 }
 
 .player-chips {

@@ -5,14 +5,14 @@ import PlayerArea from './components/PlayerArea';
 import { Deck, createDeck } from './game/deck';
 import { Card as CardType, Player, GameState, PokerHand } from './game/types';
 import { getAIDecision, AIPersonality } from './game/ai';
-import { evaluateHand, compareHands, getDescriptionWithKicker } from './game/pokerLogic';
+import { evaluateHand, compareHands, getDescriptionWithKicker, getTieBreakingDescriptions } from './game/pokerLogic';
 import './App.css';
 
 function App() {
   // Game initialization state
   const [gameStarted, setGameStarted] = useState<boolean>(false);
   const [humanPlayerName, setHumanPlayerName] = useState<string>('Player1');
-  const [humanIsDealerFirst, setHumanIsDealerFirst] = useState<boolean>(false);
+  const [humanIsBigBlindFirst, setHumanIsBigBlindFirst] = useState<boolean>(true);
 
   // Round-based game state
   const [roundNumber, setRoundNumber] = useState<number>(1);
@@ -20,16 +20,15 @@ function App() {
   const [overallWinner, setOverallWinner] = useState<Player | null>(null);
 
   // Initialize players with starting chips ($100 each)
-  const getInitialPlayers = (humanName: string, humanDealer: boolean) => [
+  const getInitialPlayers = (humanName: string, humanIsBigBlind: boolean) => [
     {
       id: 'human',
       name: humanName,
       cards: [],
       chips: 100,
       isHuman: true,
-      isDealer: humanDealer,
-      isSmallBlind: humanDealer,  // Dealer posts small blind
-      isBigBlind: !humanDealer,   // Non-dealer posts big blind
+      isSmallBlind: !humanIsBigBlind,
+      isBigBlind: humanIsBigBlind,
       currentBet: 0,
       hasFolded: false,
       hasActedThisRound: false,
@@ -40,9 +39,8 @@ function App() {
       cards: [],
       chips: 100,
       isHuman: false,
-      isDealer: !humanDealer,
-      isSmallBlind: !humanDealer,  // Dealer posts small blind
-      isBigBlind: humanDealer,     // Non-dealer posts big blind
+      isSmallBlind: humanIsBigBlind,
+      isBigBlind: !humanIsBigBlind,
       currentBet: 0,
       hasFolded: false,
       hasActedThisRound: false,
@@ -124,17 +122,15 @@ function App() {
   // Start the game with initialization parameters
   const startGame = () => {
     console.log('DEBUG: startGame called');
-    console.log('DEBUG: humanIsDealerFirst =', humanIsDealerFirst);
-    const initialPlayers = getInitialPlayers(humanPlayerName, humanIsDealerFirst);
+    console.log('DEBUG: humanIsBigBlindFirst =', humanIsBigBlindFirst);
+    const initialPlayers = getInitialPlayers(humanPlayerName, humanIsBigBlindFirst);
     console.log('DEBUG: Initial players[0] (human):', 
       'name=' + initialPlayers[0].name,
-      'isDealer=' + initialPlayers[0].isDealer,
       'isSmallBlind=' + initialPlayers[0].isSmallBlind,
       'isBigBlind=' + initialPlayers[0].isBigBlind
     );
     console.log('DEBUG: Initial players[1] (ai):', 
       'name=' + initialPlayers[1].name,
-      'isDealer=' + initialPlayers[1].isDealer,
       'isSmallBlind=' + initialPlayers[1].isSmallBlind,
       'isBigBlind=' + initialPlayers[1].isBigBlind
     );
@@ -378,13 +374,11 @@ function App() {
     console.log('DEBUG: dealNewHand called with playersToUse?', !!playersToUse);
     console.log('DEBUG: dealNewHand - currentPlayers[0] (human):', 
       'name=' + currentPlayers[0].name,
-      'isDealer=' + currentPlayers[0].isDealer,
       'isSmallBlind=' + currentPlayers[0].isSmallBlind,
       'isBigBlind=' + currentPlayers[0].isBigBlind
     );
     console.log('DEBUG: dealNewHand - currentPlayers[1] (ai):', 
       'name=' + currentPlayers[1].name,
-      'isDealer=' + currentPlayers[1].isDealer,
       'isSmallBlind=' + currentPlayers[1].isSmallBlind,
       'isBigBlind=' + currentPlayers[1].isBigBlind
     );
@@ -478,17 +472,15 @@ function App() {
     }, 200); // Initial delay
   };
 
-  // Start next round with dealer rotation (chips persist across hands)
+  // Start next round with blind rotation (chips persist across hands)
   const startNextRound = () => {
     console.log('DEBUG: startNextRound called, current players chips:', players.map(p => ({ name: p.name, chips: p.chips })));
-    // Rotate dealer/button positions - chips persist across hands
-    // Dealer always posts small blind, non-dealer posts big blind
+    // Rotate blind positions - chips persist across hands
     const nextRoundPlayers = players.map(player => ({
       ...player,
       // chips persist - do not reset
-      isDealer: !player.isDealer,
-      isSmallBlind: !player.isDealer,  // New dealer posts small blind
-      isBigBlind: player.isDealer,     // Old dealer (now non-dealer) posts big blind
+      isSmallBlind: !player.isSmallBlind,  // Swap small blind
+      isBigBlind: !player.isBigBlind,       // Swap big blind
     }));
 
     setPlayers(nextRoundPlayers);
@@ -500,9 +492,9 @@ function App() {
     setAiCardsFlipping(false); // Reset flip animation state
     setLastPotWon(0); // Reset last pot won
 
-    // Start new hand after a brief delay
+    // Start new hand after a brief delay - pass rotated players directly to avoid stale closure
     setTimeout(() => {
-      dealNewHand();
+      dealNewHand(nextRoundPlayers);
     }, 500);
   };
 
@@ -928,7 +920,6 @@ function App() {
     console.log('DEBUG: getFirstPlayerIndex - phase:', phase);
     console.log('DEBUG: getFirstPlayerIndex - players:', players.map(p => ({
       name: p.name,
-      isDealer: p.isDealer,
       isSmallBlind: p.isSmallBlind,
       isBigBlind: p.isBigBlind
     })));
@@ -1403,25 +1394,25 @@ function App() {
               </div>
 
               <div className="form-group">
-                <label>Who deals first?</label>
+                <label>Your starting position:</label>
                 <div className="dealer-choice">
                   <label>
                     <input
                       type="radio"
-                      name="dealer"
-                      checked={humanIsDealerFirst}
-                      onChange={() => setHumanIsDealerFirst(true)}
+                      name="blind"
+                      checked={humanIsBigBlindFirst}
+                      onChange={() => setHumanIsBigBlindFirst(true)}
                     />
-                    You deal first (Small Blind)
+                    You start as Big Blind
                   </label>
                   <label>
                     <input
                       type="radio"
-                      name="dealer"
-                      checked={!humanIsDealerFirst}
-                      onChange={() => setHumanIsDealerFirst(false)}
+                      name="blind"
+                      checked={!humanIsBigBlindFirst}
+                      onChange={() => setHumanIsBigBlindFirst(false)}
                     />
-                    AI deals first (Small Blind)
+                    AI starts as Big Blind (You are Small Blind)
                   </label>
                 </div>
               </div>
@@ -1432,7 +1423,7 @@ function App() {
                   <li>Each player starts with $100</li>
                   <li>Small Blind: $5, Big Blind: $10</li>
                   <li>Play continues until one player loses all chips</li>
-                  <li>Dealer position alternates each round</li>
+                  <li>Blind positions alternate each round</li>
                 </ul>
               </div>
 
@@ -1778,14 +1769,21 @@ function App() {
                     const winnerHand = showdownData.hands.find(h => h.isWinner);
                     const loserHand = showdownData.hands.find(h => !h.isWinner);
                     if (winnerHand && loserHand) {
-                      // Check if both hands are the same type - if so, show kicker info
+                      // Check if both hands are the same type - if so, show tie-breaking kicker
                       const sameType = winnerHand.pokerHand.type === loserHand.pokerHand.type;
-                      const winnerDesc = sameType 
-                        ? getDescriptionWithKicker(winnerHand.pokerHand)
-                        : winnerHand.pokerHand.description;
-                      const loserDesc = sameType 
-                        ? getDescriptionWithKicker(loserHand.pokerHand)
-                        : loserHand.pokerHand.description;
+                      let winnerDesc: string;
+                      let loserDesc: string;
+                      
+                      if (sameType) {
+                        // Use tie-breaking descriptions to show the actual kicker that won
+                        [winnerDesc, loserDesc] = getTieBreakingDescriptions(
+                          winnerHand.pokerHand,
+                          loserHand.pokerHand
+                        );
+                      } else {
+                        winnerDesc = winnerHand.pokerHand.description;
+                        loserDesc = loserHand.pokerHand.description;
+                      }
                       
                       return (
                         <span className="comparison-text">

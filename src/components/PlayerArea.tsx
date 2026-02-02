@@ -32,9 +32,8 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
 }) => {
   const getPositionIndicators = () => {
     const indicators = [];
-    if (player.isDealer) indicators.push('D');
-    if (player.isSmallBlind) indicators.push('SB');
-    if (player.isBigBlind) indicators.push('BB');
+    if (player.isSmallBlind) indicators.push('Small Blind');
+    if (player.isBigBlind) indicators.push('Big Blind');
     return indicators;
   };
 

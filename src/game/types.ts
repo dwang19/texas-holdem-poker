@@ -10,7 +10,6 @@ export interface Player {
   cards: Card[];
   chips: number;
   isHuman: boolean;
-  isDealer: boolean;
   isSmallBlind: boolean;
   isBigBlind: boolean;
   currentBet: number;
@@ -33,7 +32,7 @@ export interface GameState {
   gameOver: boolean;
   overallWinner: Player | null;
   humanPlayerName: string;
-  humanIsDealerFirst: boolean;
+  humanIsBigBlindFirst: boolean;
 }
 
 export interface PokerHand {

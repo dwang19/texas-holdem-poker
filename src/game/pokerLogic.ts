@@ -358,6 +358,80 @@ export const getDescriptionWithKicker = (hand: PokerHand): string => {
 };
 
 /**
+ * Get descriptions for two hands that highlight the actual tie-breaking kicker
+ * Used when both hands are the same type and we need to show what actually broke the tie
+ * @returns [winnerDescription, loserDescription] with tie-breaking kicker info
+ */
+export const getTieBreakingDescriptions = (
+  winnerHand: PokerHand,
+  loserHand: PokerHand
+): [string, string] => {
+  // Only applies when hands are the same type
+  if (winnerHand.type !== loserHand.type) {
+    return [winnerHand.description, loserHand.description];
+  }
+
+  const winnerCards = winnerHand.cards;
+  const loserCards = loserHand.cards;
+
+  // Find the first card position where they differ
+  let tieBreakIndex = -1;
+  for (let i = 0; i < Math.min(winnerCards.length, loserCards.length); i++) {
+    if (winnerCards[i].rank !== loserCards[i].rank) {
+      tieBreakIndex = i;
+      break;
+    }
+  }
+
+  // If no difference found (shouldn't happen if winner was determined)
+  if (tieBreakIndex === -1) {
+    return [getDescriptionWithKicker(winnerHand), getDescriptionWithKicker(loserHand)];
+  }
+
+  const winnerKicker = getRankName(winnerCards[tieBreakIndex].rank);
+  const loserKicker = getRankName(loserCards[tieBreakIndex].rank);
+
+  // Build descriptions based on hand type
+  switch (winnerHand.type) {
+    case 'high-card':
+      return [
+        `${getRankName(winnerCards[0].rank)} High (${winnerKicker} kicker)`,
+        `${getRankName(loserCards[0].rank)} High (${loserKicker} kicker)`
+      ];
+    case 'pair': {
+      const pairRank = getRankName(winnerCards[0].rank);
+      return [
+        `Pair of ${pairRank}s (${winnerKicker} kicker)`,
+        `Pair of ${pairRank}s (${loserKicker} kicker)`
+      ];
+    }
+    case 'two-pair': {
+      // For two pair, use the base description and add kicker
+      return [
+        `${winnerHand.description} (${winnerKicker} kicker)`,
+        `${loserHand.description} (${loserKicker} kicker)`
+      ];
+    }
+    case 'three-of-a-kind': {
+      const tripsRank = getRankName(winnerCards[0].rank);
+      return [
+        `Three ${tripsRank}s (${winnerKicker} kicker)`,
+        `Three ${tripsRank}s (${loserKicker} kicker)`
+      ];
+    }
+    case 'flush': {
+      return [
+        `${winnerHand.description} (${winnerKicker} high)`,
+        `${loserHand.description} (${loserKicker} high)`
+      ];
+    }
+    default:
+      // For other hands (straights, full houses, quads), kickers rarely matter
+      return [winnerHand.description, loserHand.description];
+  }
+};
+
+/**
  * Main function to evaluate the best poker hand from 7 cards
  * @param holeCards - Player's 2 private cards
  * @param communityCards - 5 shared community cards
