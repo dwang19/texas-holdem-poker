@@ -1011,10 +1011,15 @@ function App() {
       return { valid: false, reason: 'Player has already folded' };
     }
 
+    // Check if player has no funds
+    if (player.chips === 0) {
+      return { valid: false, reason: 'No funds remaining' };
+    }
+
     // Validate raise amount input
     const raiseAmount = parseInt(raiseAmountStr);
-    if (isNaN(raiseAmount) || raiseAmount <= 0) {
-      return { valid: false, reason: 'Invalid raise amount. Must be a positive number' };
+    if (isNaN(raiseAmount) || raiseAmount < 5) {
+      return { valid: false, reason: 'Raise amount must be at least $5' };
     }
 
     // Calculate minimum raise (must at least match current bet plus raise amount)
@@ -1023,12 +1028,6 @@ function App() {
 
     if (minRaise > player.chips) {
       return { valid: false, reason: `Insufficient chips. Need at least $${minRaise} to raise, but only have $${player.chips}` };
-    }
-
-    // Additional validation: raise shouldn't be too small compared to current bet
-    const minRaiseAmount = Math.max(1, Math.floor(currentBet * 0.5)); // At least half the current bet or $1 minimum
-    if (raiseAmount < minRaiseAmount) {
-      return { valid: false, reason: `Raise amount too small. Minimum raise is $${minRaiseAmount}` };
     }
 
     return { valid: true, totalRaiseAmount: minRaise, minRaise: raiseAmount };
@@ -1703,21 +1702,53 @@ function App() {
                       Call ${callValidation.callAmount || 0}
                     </button>
                     <div className="raise-section">
-                      <input
-                        type="number"
-                        placeholder="Raise amount"
-                        value={raiseAmount}
-                        onChange={(e) => setRaiseAmount(e.target.value)}
-                        className="raise-input"
-                        min={Math.max(1, Math.floor(currentBet * 0.5))}
-                        disabled={!isPlayerTurn || (raiseAmount !== '' && !validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid)}
-                      />
+                      <div className="raise-input-wrapper">
+                        <span className="dollar-sign">$</span>
+                        <input
+                          type="number"
+                          value={raiseAmount === '' ? '5' : raiseAmount}
+                          onChange={(e) => setRaiseAmount(e.target.value)}
+                          className="raise-input"
+                          min="5"
+                          readOnly
+                          disabled={!isPlayerTurn || (raiseAmount !== '' && !validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid) || humanPlayer.chips === 0}
+                        />
+                        <div className="raise-controls">
+                          <button
+                            type="button"
+                            className="raise-arrow raise-up"
+                            onClick={() => {
+                              const currentValue = raiseAmount === '' ? 5 : parseInt(raiseAmount);
+                              const newValue = Math.min(currentValue + 5, humanPlayer.chips);
+                              setRaiseAmount(newValue.toString());
+                            }}
+                            disabled={!isPlayerTurn || humanPlayer.chips === 0 || (raiseAmount !== '' && parseInt(raiseAmount) >= humanPlayer.chips)}
+                            title="Increase raise amount"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            className="raise-arrow raise-down"
+                            onClick={() => {
+                              const currentValue = raiseAmount === '' ? 5 : parseInt(raiseAmount);
+                              const newValue = Math.max(currentValue - 5, 5);
+                              setRaiseAmount(newValue.toString());
+                            }}
+                            disabled={!isPlayerTurn || humanPlayer.chips === 0 || (raiseAmount !== '' && parseInt(raiseAmount) <= 5)}
+                            title="Decrease raise amount"
+                          >
+                            ▼
+                          </button>
+                        </div>
+                      </div>
                       <button
                         className="bet-button raise-button"
                         onClick={() => handleBettingAction('raise')}
-                        disabled={!isPlayerTurn || !validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid}
-                        title={!validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid ?
-                          validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).reason :
+                        disabled={!isPlayerTurn || !validateRaiseAction(humanPlayer, currentBet, raiseAmount === '' ? '5' : raiseAmount, gamePhase).valid || humanPlayer.chips === 0}
+                        title={!validateRaiseAction(humanPlayer, currentBet, raiseAmount === '' ? '5' : raiseAmount, gamePhase).valid ?
+                          validateRaiseAction(humanPlayer, currentBet, raiseAmount === '' ? '5' : raiseAmount, gamePhase).reason :
+                          humanPlayer.chips === 0 ? 'No funds remaining' :
                           undefined}
                       >
                         Raise
