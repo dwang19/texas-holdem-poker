@@ -57,7 +57,7 @@
   gap: var(--gap-medium);
 }
 
-/* Showdown Dim Overlay */
+/* Showdown Dim Overlay - lighter overlay so cards remain visible */
 .game-container.showdown-active::before {
   content: '';
   position: fixed;
@@ -65,27 +65,34 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.35);
   z-index: 50;
   pointer-events: none;
   animation: fadeIn 0.5s ease-out;
 }
 
 /* Elements that should appear above the dim overlay during showdown */
-.game-container.showdown-active .player-cards,
-.game-container.showdown-active .community-cards .cards-row {
+.game-container.showdown-active .player-area,
+.game-container.showdown-active .community-cards {
   position: relative;
   z-index: 100;
+  isolation: isolate;
 }
 
-/* Make non-highlighted cards brighter during showdown */
-.game-container.showdown-active .player-cards .card:not(.card--highlighted),
-.game-container.showdown-active .community-cards .card:not(.card--highlighted) {
-  filter: brightness(1.1);
+/* Make card backgrounds appear above overlay during showdown */
+.game-container.showdown-active .player-area .card,
+.game-container.showdown-active .community-cards .card {
+  transform: translateZ(0);
+  z-index: 101;
+}
+
+/* Ensure card fronts have solid white background during showdown */
+.game-container.showdown-active .player-area .card .card__front,
+.game-container.showdown-active .community-cards .card .card__front {
+  background: #ffffff !important;
   box-shadow: 
-    0 0 10px rgba(255, 255, 255, 0.3),
-    0 0 20px rgba(255, 255, 255, 0.15),
-    0 4px 12px rgba(0, 0, 0, 0.3);
+    0 0 15px rgba(255, 255, 255, 0.6),
+    0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Main Game Layout */
