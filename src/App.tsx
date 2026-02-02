@@ -821,8 +821,8 @@ function App() {
               hasActedThisRound: true,
             };
             updatedPot += aiBetAmount;
-            setAiActionDisplay({ action: 'calls', amount: aiBetAmount, isThinking: false });
-            aiActionText = `Call $${aiBetAmount}`;
+            setAiActionDisplay({ action: aiBetAmount === 0 ? 'checks' : 'calls', amount: aiBetAmount, isThinking: false });
+            aiActionText = aiBetAmount === 0 ? 'Check' : `Call $${aiBetAmount}`;
           }
           break;
           
@@ -1103,7 +1103,7 @@ function App() {
           hasActedThisRound: true,
         };
         newPot += callAmount;
-        actionText = `Call $${callAmount}`;
+        actionText = callAmount === 0 ? 'Check' : `Call $${callAmount}`;
         break;
 
       case 'raise':
@@ -1264,8 +1264,8 @@ function App() {
                 hasActedThisRound: true,
               };
               updatedPot += aiBetAmount;
-              setAiActionDisplay({ action: 'calls', amount: aiBetAmount, isThinking: false });
-              aiActionText = `Call $${aiBetAmount}`;
+              setAiActionDisplay({ action: aiBetAmount === 0 ? 'checks' : 'calls', amount: aiBetAmount, isThinking: false });
+              aiActionText = aiBetAmount === 0 ? 'Check' : `Call $${aiBetAmount}`;
             }
             break;
 
