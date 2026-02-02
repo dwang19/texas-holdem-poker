@@ -5,7 +5,7 @@ import PlayerArea from './components/PlayerArea';
 import { Deck, createDeck } from './game/deck';
 import { Card as CardType, Player, GameState, PokerHand } from './game/types';
 import { getAIDecision, AIPersonality } from './game/ai';
-import { evaluateHand, compareHands } from './game/pokerLogic';
+import { evaluateHand, compareHands, getDescriptionWithKicker } from './game/pokerLogic';
 import './App.css';
 
 function App() {
@@ -28,8 +28,8 @@ function App() {
       chips: 100,
       isHuman: true,
       isDealer: humanDealer,
-      isSmallBlind: !humanDealer,
-      isBigBlind: humanDealer,
+      isSmallBlind: humanDealer,  // Dealer posts small blind
+      isBigBlind: !humanDealer,   // Non-dealer posts big blind
       currentBet: 0,
       hasFolded: false,
       hasActedThisRound: false,
@@ -41,8 +41,8 @@ function App() {
       chips: 100,
       isHuman: false,
       isDealer: !humanDealer,
-      isSmallBlind: humanDealer,
-      isBigBlind: !humanDealer,
+      isSmallBlind: !humanDealer,  // Dealer posts small blind
+      isBigBlind: humanDealer,     // Non-dealer posts big blind
       currentBet: 0,
       hasFolded: false,
       hasActedThisRound: false,
@@ -65,6 +65,7 @@ function App() {
     hands: { player: Player; pokerHand: PokerHand; isWinner: boolean }[];
     communityCardsUsed: CardType[];
     potAmount: number;
+    isTie?: boolean;
   } | null>(null);
   const [isDealing, setIsDealing] = useState<boolean>(false);
   const [animatingCardIndices, setAnimatingCardIndices] = useState<number[]>([]);
@@ -86,19 +87,66 @@ function App() {
     }
   }, [gameLog]);
 
+  // Auto-trigger AI action when it becomes AI's turn
+  useEffect(() => {
+    // Only act during betting phases
+    const bettingPhases = ['preflop', 'flop', 'turn', 'river'];
+    if (!bettingPhases.includes(gamePhase)) return;
+    
+    // Don't act while dealing or during hole card animation
+    if (isDealing || holeCardAnimating) return;
+    
+    // Check if current player is AI and hasn't acted
+    if (currentPlayerIndex === -1 || currentPlayerIndex >= players.length) return;
+    
+    const currentPlayer = players[currentPlayerIndex];
+    if (!currentPlayer || currentPlayer.isHuman || currentPlayer.hasFolded) return;
+    
+    // Prevent triggering if AI already acted this round or if AI action is already in progress
+    if (currentPlayer.hasActedThisRound || aiActionDisplay) return;
+    
+    // Debug: log the state being passed to AI
+    console.log('DEBUG: useEffect triggering AI action', {
+      currentPlayerIndex,
+      phase: gamePhase,
+      pot,
+      currentBet,
+      aiCurrentBet: currentPlayer.currentBet,
+      aiChips: currentPlayer.chips,
+      callAmount: currentBet - currentPlayer.currentBet
+    });
+    
+    // Trigger AI action
+    triggerAiActionIfNeeded(currentPlayerIndex, players, pot, currentBet, gamePhase as 'preflop' | 'flop' | 'turn' | 'river');
+    
+  }, [currentPlayerIndex, gamePhase, isDealing, holeCardAnimating, players, pot, currentBet, aiActionDisplay]);
+
   // Start the game with initialization parameters
   const startGame = () => {
     console.log('DEBUG: startGame called');
+    console.log('DEBUG: humanIsDealerFirst =', humanIsDealerFirst);
     const initialPlayers = getInitialPlayers(humanPlayerName, humanIsDealerFirst);
+    console.log('DEBUG: Initial players[0] (human):', 
+      'name=' + initialPlayers[0].name,
+      'isDealer=' + initialPlayers[0].isDealer,
+      'isSmallBlind=' + initialPlayers[0].isSmallBlind,
+      'isBigBlind=' + initialPlayers[0].isBigBlind
+    );
+    console.log('DEBUG: Initial players[1] (ai):', 
+      'name=' + initialPlayers[1].name,
+      'isDealer=' + initialPlayers[1].isDealer,
+      'isSmallBlind=' + initialPlayers[1].isSmallBlind,
+      'isBigBlind=' + initialPlayers[1].isBigBlind
+    );
     setPlayers(initialPlayers);
     setGameStarted(true);
     setRoundNumber(1);
     setGameOver(false);
     setOverallWinner(null);
     setGameLog([{ timestamp: new Date(), message: `Game started! ${humanPlayerName} vs AI Player` }]);
-    // Trigger the first hand deal
+    // Trigger the first hand deal - use initialPlayers directly to avoid stale state
     setTimeout(() => {
-      dealNewHand();
+      dealNewHand(initialPlayers);
     }, 100);
   };
 
@@ -151,7 +199,8 @@ function App() {
     setLastPotWon(potAmount); // Store pot amount for winner announcement
     setPot(0);
     setHandComplete(true);
-    setGamePhase('showdown'); // Set to showdown so UI can show winner, but no card reveal
+    // DON'T set gamePhase to 'showdown' on fold - that would reveal AI cards
+    // Keep the current phase so cards stay hidden
     setCurrentPlayerIndex(-1); // Ensure currentPlayerIndex is -1 to disable action buttons
     
     // Don't set showdown data - no need to show hands when someone folds
@@ -181,9 +230,10 @@ function App() {
     const activePlayers = players.filter(p => !p.hasFolded);
 
     let updatedPlayers = [...players];
-    let winningPlayer: Player;
+    let winningPlayer: Player | null = null;
     let showdownHands: { player: Player; pokerHand: PokerHand; isWinner: boolean }[] = [];
     let communityCardsUsed: CardType[] = [];
+    let isTie = false;
     
     // Store the pot amount before resetting it
     const potAmount = pot;
@@ -192,7 +242,7 @@ function App() {
       // Only one player left, they win by default
       winningPlayer = activePlayers[0];
       updatedPlayers = updatedPlayers.map(player =>
-        player.id === winningPlayer.id
+        player.id === winningPlayer!.id
           ? { ...player, chips: player.chips + potAmount }
           : player
       );
@@ -214,7 +264,7 @@ function App() {
         hand: evaluateHand(player.cards, communityCards)
       }));
 
-      // Find the best hand
+      // Find the best hand and check for ties
       let bestHandIndex = 0;
       for (let i = 1; i < playerHands.length; i++) {
         const comparison = compareHands(playerHands[i].hand, playerHands[bestHandIndex].hand);
@@ -223,23 +273,52 @@ function App() {
         }
       }
 
-      winningPlayer = playerHands[bestHandIndex].player;
+      // Check if there's a tie (for 2-player game)
+      if (playerHands.length === 2) {
+        const comparison = compareHands(playerHands[0].hand, playerHands[1].hand);
+        if (comparison === 0) {
+          isTie = true;
+        }
+      }
 
-      // Award the pot to the winner
-      updatedPlayers = updatedPlayers.map(player =>
-        player.id === winningPlayer.id
-          ? { ...player, chips: player.chips + potAmount }
-          : player
-      );
+      if (isTie) {
+        // Split pot between tied players
+        const splitAmount = Math.floor(potAmount / 2);
+        updatedPlayers = updatedPlayers.map(player => {
+          if (activePlayers.some(ap => ap.id === player.id)) {
+            return { ...player, chips: player.chips + splitAmount };
+          }
+          return player;
+        });
+        
+        // Both players are "winners" in a tie
+        showdownHands = playerHands.map(ph => ({
+          player: ph.player,
+          pokerHand: ph.hand,
+          isWinner: true
+        }));
+        
+        // Use first player for the winner reference (both actually won)
+        winningPlayer = playerHands[0].player;
+      } else {
+        winningPlayer = playerHands[bestHandIndex].player;
 
-      // Prepare showdown data for all active players
-      showdownHands = playerHands.map((ph, index) => ({
-        player: ph.player,
-        pokerHand: ph.hand,
-        isWinner: index === bestHandIndex
-      }));
+        // Award the pot to the winner
+        updatedPlayers = updatedPlayers.map(player =>
+          player.id === winningPlayer!.id
+            ? { ...player, chips: player.chips + potAmount }
+            : player
+        );
 
-      // Get community cards used in the winning hand
+        // Prepare showdown data for all active players
+        showdownHands = playerHands.map((ph, index) => ({
+          player: ph.player,
+          pokerHand: ph.hand,
+          isWinner: index === bestHandIndex
+        }));
+      }
+
+      // Get community cards used in the winning hand (or first player's hand in case of tie)
       communityCardsUsed = playerHands[bestHandIndex].hand.cards.filter(card =>
         communityCards.some(commCard => commCard.rank === card.rank && commCard.suit === card.suit)
       );
@@ -249,7 +328,8 @@ function App() {
     setShowdownData({
       hands: showdownHands,
       communityCardsUsed,
-      potAmount: potAmount
+      potAmount: potAmount,
+      isTie: isTie
     });
 
     setPlayers(updatedPlayers);
@@ -262,16 +342,23 @@ function App() {
     
     // Add to game log with detailed hand comparison
     const winningHandDesc = showdownHands.find(h => h.isWinner)?.pokerHand.description || 'best hand';
-    if (showdownHands.length > 1) {
+    if (isTie && showdownHands.length > 1) {
+      // Tie - split pot
+      const splitAmount = Math.floor(potAmount / 2);
+      setGameLog(prev => [...prev, { 
+        timestamp: new Date(), 
+        message: `Split pot! Both players have ${winningHandDesc} - each receives $${splitAmount}` 
+      }]);
+    } else if (showdownHands.length > 1) {
       // Show comparison in game log
       const losingHand = showdownHands.find(h => !h.isWinner);
       const losingHandDesc = losingHand?.pokerHand.description || 'unknown hand';
       setGameLog(prev => [...prev, { 
         timestamp: new Date(), 
-        message: `${winningPlayer.name} wins $${potAmount} with ${winningHandDesc} (beats ${losingHand?.player.name}'s ${losingHandDesc})` 
+        message: `${winningPlayer!.name} wins $${potAmount} with ${winningHandDesc} (beats ${losingHand?.player.name}'s ${losingHandDesc})` 
       }]);
     } else {
-      setGameLog(prev => [...prev, { timestamp: new Date(), message: `${winningPlayer.name} wins $${potAmount} with ${winningHandDesc}` }]);
+      setGameLog(prev => [...prev, { timestamp: new Date(), message: `${winningPlayer!.name} wins $${potAmount} with ${winningHandDesc}` }]);
     }
 
     // Check for bust condition (player with $0 chips) - happens in both cases
@@ -285,20 +372,34 @@ function App() {
     }
   };
 
-  const dealNewHand = () => {
-    console.log('DEBUG: dealNewHand called, current players chips:', players.map(p => ({ name: p.name, chips: p.chips })));
+  const dealNewHand = (playersToUse?: Player[]) => {
+    // Use provided players or fall back to current state
+    const currentPlayers = playersToUse || players;
+    console.log('DEBUG: dealNewHand called with playersToUse?', !!playersToUse);
+    console.log('DEBUG: dealNewHand - currentPlayers[0] (human):', 
+      'name=' + currentPlayers[0].name,
+      'isDealer=' + currentPlayers[0].isDealer,
+      'isSmallBlind=' + currentPlayers[0].isSmallBlind,
+      'isBigBlind=' + currentPlayers[0].isBigBlind
+    );
+    console.log('DEBUG: dealNewHand - currentPlayers[1] (ai):', 
+      'name=' + currentPlayers[1].name,
+      'isDealer=' + currentPlayers[1].isDealer,
+      'isSmallBlind=' + currentPlayers[1].isSmallBlind,
+      'isBigBlind=' + currentPlayers[1].isBigBlind
+    );
     setGameLog(prev => [...prev, { timestamp: new Date(), message: `Round ${roundNumber} - New hand dealt` }]);
     const newDeck = createDeck();
 
     // Deal hole cards to players
-    const humanPlayer = players.find(p => p.isHuman)!;
-    const aiPlayer = players.find(p => !p.isHuman)!;
+    const humanPlayer = currentPlayers.find(p => p.isHuman)!;
+    const aiPlayer = currentPlayers.find(p => !p.isHuman)!;
 
     const humanHand = newDeck.dealCards(2);
     const aiHand = newDeck.dealCards(2);
 
     // Reset player states for new hand
-    const resetPlayers = players.map(player => ({
+    const resetPlayers = currentPlayers.map(player => ({
       ...player,
       cards: [], // Start with no cards visible
       currentBet: 0,
@@ -325,7 +426,20 @@ function App() {
     setBurnedCards([]); // Reset burned cards for new hand
     setPot(SMALL_BLIND + BIG_BLIND);
     setCurrentBet(BIG_BLIND);
-    setCurrentPlayerIndex(0); // Start with human player (after blinds)
+    // Pre-flop: Small blind acts first (after blinds are posted)
+    console.log('DEBUG: dealNewHand - playersWithBlinds[0]:', 
+      'name=' + playersWithBlinds[0].name,
+      'isSmallBlind=' + playersWithBlinds[0].isSmallBlind,
+      'isBigBlind=' + playersWithBlinds[0].isBigBlind
+    );
+    console.log('DEBUG: dealNewHand - playersWithBlinds[1]:', 
+      'name=' + playersWithBlinds[1].name,
+      'isSmallBlind=' + playersWithBlinds[1].isSmallBlind,
+      'isBigBlind=' + playersWithBlinds[1].isBigBlind
+    );
+    const firstPlayerIndex = getFirstPlayerIndex(playersWithBlinds, 'preflop');
+    console.log('DEBUG: dealNewHand - firstPlayerIndex:', firstPlayerIndex);
+    setCurrentPlayerIndex(firstPlayerIndex);
     setGamePhase('preflop');
     setRaiseAmount('');
     setWinner(null);
@@ -358,6 +472,7 @@ function App() {
 
         setTimeout(() => {
           setHoleCardAnimating(false);
+          // AI action will be triggered by the useEffect that watches for AI's turn
         }, 600); // Animation duration
       }, 400); // Delay between first and second card
     }, 200); // Initial delay
@@ -367,12 +482,13 @@ function App() {
   const startNextRound = () => {
     console.log('DEBUG: startNextRound called, current players chips:', players.map(p => ({ name: p.name, chips: p.chips })));
     // Rotate dealer/button positions - chips persist across hands
+    // Dealer always posts small blind, non-dealer posts big blind
     const nextRoundPlayers = players.map(player => ({
       ...player,
       // chips persist - do not reset
       isDealer: !player.isDealer,
-      isSmallBlind: !player.isSmallBlind,
-      isBigBlind: !player.isBigBlind,
+      isSmallBlind: !player.isDealer,  // New dealer posts small blind
+      isBigBlind: player.isDealer,     // Old dealer (now non-dealer) posts big blind
     }));
 
     setPlayers(nextRoundPlayers);
@@ -576,8 +692,8 @@ function App() {
                   }));
                   console.log('DEBUG: Flop phase transition - players after reset:', resetBetPlayers.map(p => ({ name: p.name, chips: p.chips })));
                   
-                  // Find first active player for new betting round
-                  const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
+                  // Post-flop: Big blind acts first (newPhase is 'flop' in this context)
+                  const firstActivePlayerIndex = getFirstPlayerIndex(resetBetPlayers, newPhase as 'flop' | 'turn' | 'river');
                   setCurrentPlayerIndex(firstActivePlayerIndex);
                   
                   return resetBetPlayers;
@@ -623,8 +739,8 @@ function App() {
               }));
               console.log('DEBUG: Phase transition - players after reset:', resetBetPlayers.map(p => ({ name: p.name, chips: p.chips })));
               
-              // Find first active player for new betting round
-              const firstActivePlayerIndex = resetBetPlayers.findIndex(p => !p.hasFolded);
+              // Post-flop: Big blind acts first (newPhase is 'turn' or 'river' in this context)
+              const firstActivePlayerIndex = getFirstPlayerIndex(resetBetPlayers, newPhase as 'flop' | 'turn' | 'river');
               setCurrentPlayerIndex(firstActivePlayerIndex);
               
               return resetBetPlayers;
@@ -641,6 +757,158 @@ function App() {
     }
   };
 
+  // Function to trigger AI action if it's AI's turn to act
+  const triggerAiActionIfNeeded = (playerIndex: number, currentPlayers: Player[], currentPotAmount: number, currentBetAmount: number, phase: typeof gamePhase) => {
+    if (playerIndex === -1) return;
+    
+    const currentPlayer = currentPlayers[playerIndex];
+    if (!currentPlayer || currentPlayer.isHuman || currentPlayer.hasFolded) return;
+    
+    console.log('DEBUG: triggerAiActionIfNeeded called', {
+      playerIndex,
+      aiCurrentBet: currentPlayer.currentBet,
+      aiChips: currentPlayer.chips,
+      currentPotAmount,
+      currentBetAmount,
+      callAmount: currentBetAmount - currentPlayer.currentBet,
+      phase
+    });
+    
+    // Show AI thinking animation
+    setAiActionDisplay({ action: '', isThinking: true });
+    
+    setTimeout(() => {
+      const aiPlayer = currentPlayers[playerIndex];
+      const activePlayersCount = currentPlayers.filter(p => !p.hasFolded).length;
+      
+      console.log('DEBUG: Calling getAIDecision with', {
+        aiCurrentBet: aiPlayer.currentBet,
+        aiChips: aiPlayer.chips,
+        currentBetAmount,
+        currentPotAmount,
+        communityCardsCount: communityCards.length,
+        phase: phase
+      });
+      
+      const aiDecision = getAIDecision(
+        aiPlayer,
+        communityCards,
+        currentBetAmount,
+        currentPotAmount,
+        phase,
+        activePlayersCount,
+        aiPersonality
+      );
+      
+      console.log('DEBUG: AI decision:', aiDecision);
+      
+      let aiBetAmount = 0;
+      let updatedPlayers = [...currentPlayers];
+      let updatedPot = currentPotAmount;
+      let updatedCurrentBet = currentBetAmount;
+      let aiActionText = '';
+      
+      switch (aiDecision.action) {
+        case 'fold':
+          updatedPlayers[playerIndex] = {
+            ...aiPlayer,
+            hasFolded: true,
+            hasActedThisRound: true,
+          };
+          setAiActionDisplay({ action: 'folds', isThinking: false });
+          aiActionText = 'Fold';
+          break;
+          
+        case 'call':
+          aiBetAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
+          if (aiPlayer.chips >= aiBetAmount) {
+            updatedPlayers[playerIndex] = {
+              ...aiPlayer,
+              chips: Math.max(0, aiPlayer.chips - aiBetAmount),
+              currentBet: aiPlayer.currentBet + aiBetAmount,
+              hasActedThisRound: true,
+            };
+            updatedPot += aiBetAmount;
+            setAiActionDisplay({ action: 'calls', amount: aiBetAmount, isThinking: false });
+            aiActionText = `Call $${aiBetAmount}`;
+          }
+          break;
+          
+        case 'raise':
+          const raiseAmount = aiDecision.amount || 0;
+          const callAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
+          const totalRaiseAmount = callAmount + raiseAmount;
+          
+          if (aiPlayer.chips >= totalRaiseAmount) {
+            updatedPlayers[playerIndex] = {
+              ...aiPlayer,
+              chips: Math.max(0, aiPlayer.chips - totalRaiseAmount),
+              currentBet: aiPlayer.currentBet + totalRaiseAmount,
+              hasActedThisRound: true,
+            };
+            updatedPlayers = updatedPlayers.map((player, index) => ({
+              ...player,
+              hasActedThisRound: index === playerIndex ? true : false,
+            }));
+            updatedPot += totalRaiseAmount;
+            updatedCurrentBet = aiPlayer.currentBet + totalRaiseAmount;
+            setAiActionDisplay({ action: 'raises', amount: totalRaiseAmount, isThinking: false });
+            aiActionText = `Raise $${totalRaiseAmount}`;
+          } else {
+            // Fallback to call
+            const fallbackCallAmount = Math.max(0, updatedCurrentBet - aiPlayer.currentBet);
+            if (aiPlayer.chips >= fallbackCallAmount) {
+              updatedPlayers[playerIndex] = {
+                ...aiPlayer,
+                chips: Math.max(0, aiPlayer.chips - fallbackCallAmount),
+                currentBet: aiPlayer.currentBet + fallbackCallAmount,
+                hasActedThisRound: true,
+              };
+              updatedPot += fallbackCallAmount;
+              setAiActionDisplay({ action: 'calls', amount: fallbackCallAmount, isThinking: false });
+              aiActionText = `Call $${fallbackCallAmount}`;
+            }
+          }
+          break;
+      }
+      
+      // Update last action for AI player
+      setPlayerLastActions(prev => ({
+        ...prev,
+        [aiPlayer.id]: aiActionText
+      }));
+      
+      // Add to game log
+      setGameLog(prev => [...prev, { timestamp: new Date(), message: `AI Player ${aiActionText.toLowerCase()}` }]);
+      
+      setPot(updatedPot);
+      setCurrentBet(updatedCurrentBet);
+      setPlayers(updatedPlayers);
+      
+      // Clear AI action display after a delay
+      setTimeout(() => {
+        setAiActionDisplay(null);
+      }, 2500);
+      
+      // Check if betting round is complete or if AI folded
+      const aiActivePlayers = updatedPlayers.filter(p => !p.hasFolded);
+      
+      if (aiDecision.action === 'fold' && aiActivePlayers.length === 1) {
+        console.log('DEBUG: AI folded at start, awarding pot to remaining player');
+        setCurrentPlayerIndex(-1);
+        setTimeout(() => {
+          handleFoldWinWithPot(aiActivePlayers[0], updatedPot, updatedPlayers);
+        }, 500);
+        return;
+      }
+      
+      // Move to next player (human)
+      const nextPlayerIndex = getNextActivePlayerIndex(updatedPlayers, playerIndex);
+      setCurrentPlayerIndex(nextPlayerIndex);
+      
+    }, 1500);
+  };
+
   // Function to check if betting round is complete
   const isBettingRoundComplete = (players: Player[], currentBet: number): boolean => {
     const activePlayers = players.filter(p => !p.hasFolded);
@@ -650,6 +918,45 @@ function App() {
     return activePlayers.every(player =>
       player.hasActedThisRound && player.currentBet === currentBet
     );
+  };
+
+  // Get the index of the player who should act first in the current betting round
+  const getFirstPlayerIndex = (players: Player[], phase: 'preflop' | 'flop' | 'turn' | 'river'): number => {
+    const activePlayers = players.filter(p => !p.hasFolded);
+    if (activePlayers.length === 0) return -1;
+    
+    console.log('DEBUG: getFirstPlayerIndex - phase:', phase);
+    console.log('DEBUG: getFirstPlayerIndex - players:', players.map(p => ({
+      name: p.name,
+      isDealer: p.isDealer,
+      isSmallBlind: p.isSmallBlind,
+      isBigBlind: p.isBigBlind
+    })));
+    
+    if (phase === 'preflop') {
+      // Pre-flop: Small blind acts first (after blinds are posted)
+      const smallBlindPlayer = activePlayers.find(p => p.isSmallBlind);
+      console.log('DEBUG: getFirstPlayerIndex - smallBlindPlayer:', smallBlindPlayer?.name);
+      if (smallBlindPlayer) {
+        const index = players.findIndex(p => p.id === smallBlindPlayer.id);
+        console.log('DEBUG: getFirstPlayerIndex - returning index:', index);
+        return index;
+      }
+    } else {
+      // Post-flop: Big blind acts first
+      const bigBlindPlayer = activePlayers.find(p => p.isBigBlind);
+      console.log('DEBUG: getFirstPlayerIndex - bigBlindPlayer:', bigBlindPlayer?.name);
+      if (bigBlindPlayer) {
+        const index = players.findIndex(p => p.id === bigBlindPlayer.id);
+        console.log('DEBUG: getFirstPlayerIndex - returning index:', index);
+        return index;
+      }
+    }
+    
+    // Fallback: return first active player
+    const fallbackIndex = players.findIndex(p => !p.hasFolded);
+    console.log('DEBUG: getFirstPlayerIndex - fallback index:', fallbackIndex);
+    return fallbackIndex;
   };
 
   // Function to get next active player index
@@ -1434,29 +1741,60 @@ function App() {
         </div>
 
 
-        {/* Status Container - Shows AI actions during play, showdown results during showdown */}
-        <div className={`status-container ${gamePhase === 'showdown' ? 'showdown-active' : ''} ${aiActionDisplay || gamePhase === 'showdown' ? 'visible' : 'hidden'}`}>
-          {gamePhase === 'showdown' && winner ? (
+        {/* Status Container - Shows AI actions during play, showdown/fold results when hand is complete */}
+        <div className={`status-container ${gamePhase === 'showdown' ? 'showdown-active' : ''} ${aiActionDisplay || gamePhase === 'showdown' || (handComplete && winner) ? 'visible' : 'hidden'}`}>
+          {(gamePhase === 'showdown' || (handComplete && winner)) && winner ? (
             <div className="showdown-status-content">
               <div className="showdown-winner-info">
-                <span className="winner-crown">👑</span>
-                <span className="winner-name">{winner.name} wins!</span>
-                <span className="winner-amount">${showdownData?.potAmount || lastPotWon}</span>
+                <span className="winner-crown">{showdownData?.isTie ? '🤝' : '👑'}</span>
+                <span className="winner-name">{showdownData?.isTie ? 'Split Pot!' : `${winner.name} wins!`}</span>
+                <span className="winner-amount">
+                  {showdownData?.isTie 
+                    ? `$${Math.floor((showdownData?.potAmount || lastPotWon) / 2)} each`
+                    : `$${showdownData?.potAmount || lastPotWon}`
+                  }
+                </span>
               </div>
               {showdownData && showdownData.hands.length > 1 ? (
                 <div className="showdown-comparison">
                   {(() => {
+                    if (showdownData.isTie) {
+                      // Both players have the same hand - show with kicker info
+                      const hand1 = showdownData.hands[0];
+                      const hand2 = showdownData.hands[1];
+                      return (
+                        <span className="comparison-text">
+                          <span className={hand1.player.isHuman ? 'human-text' : 'ai-text'}>
+                            {getDescriptionWithKicker(hand1.pokerHand)}
+                          </span>
+                          {' ties '}
+                          <span className={hand2.player.isHuman ? 'human-text' : 'ai-text'}>
+                            {getDescriptionWithKicker(hand2.pokerHand)}
+                          </span>
+                        </span>
+                      );
+                    }
+                    
                     const winnerHand = showdownData.hands.find(h => h.isWinner);
                     const loserHand = showdownData.hands.find(h => !h.isWinner);
                     if (winnerHand && loserHand) {
+                      // Check if both hands are the same type - if so, show kicker info
+                      const sameType = winnerHand.pokerHand.type === loserHand.pokerHand.type;
+                      const winnerDesc = sameType 
+                        ? getDescriptionWithKicker(winnerHand.pokerHand)
+                        : winnerHand.pokerHand.description;
+                      const loserDesc = sameType 
+                        ? getDescriptionWithKicker(loserHand.pokerHand)
+                        : loserHand.pokerHand.description;
+                      
                       return (
                         <span className="comparison-text">
                           <span className={winnerHand.player.isHuman ? 'human-text' : 'ai-text'}>
-                            {winnerHand.pokerHand.description}
+                            {winnerDesc}
                           </span>
                           {' beats '}
                           <span className={loserHand.player.isHuman ? 'human-text' : 'ai-text'}>
-                            {loserHand.pokerHand.description}
+                            {loserDesc}
                           </span>
                         </span>
                       );

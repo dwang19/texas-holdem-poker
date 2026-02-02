@@ -34,7 +34,9 @@ export class PokerAI {
     activePlayersCount: number
   ): AIDecisionResult {
     if (!player.cards || player.cards.length === 0) {
-      return { action: 'fold', reasoning: 'No cards to evaluate' };
+      // Safety: if no cards available, just call/check - don't fold
+      console.warn('AI: No cards available, defaulting to call');
+      return { action: 'call', reasoning: 'No cards to evaluate - defaulting to call' };
     }
 
     // Evaluate hand strength (0-1 scale)
@@ -46,8 +48,27 @@ export class PokerAI {
     // Calculate call amount needed
     const callAmount = Math.max(0, currentBet - player.currentBet);
 
+    // DEBUG: Log all input values
+    console.log('=== AI DECISION DEBUG ===');
+    console.log('Player cards:', player.cards.map(c => `${c.displayRank}${c.suit}`).join(', '));
+    console.log('Community cards:', communityCards.map(c => `${c.displayRank}${c.suit}`).join(', ') || 'none');
+    console.log('Game phase:', gamePhase);
+    console.log('Current bet to match:', currentBet);
+    console.log('Player current bet:', player.currentBet);
+    console.log('Call amount needed:', callAmount);
+    console.log('Player chips:', player.chips);
+    console.log('Pot:', pot);
+    console.log('Hand strength:', handStrength.toFixed(3));
+    console.log('Pot odds:', potOdds.toFixed(3));
+    console.log('Personality:', this.personality);
+
     // Make decision based on personality and hand strength
-    return this.decideAction(handStrength, potOdds, callAmount, player.chips, gamePhase, activePlayersCount);
+    const decision = this.decideAction(handStrength, potOdds, callAmount, player.chips, gamePhase, activePlayersCount);
+    
+    console.log('DECISION:', decision.action, '-', decision.reasoning);
+    console.log('=========================');
+    
+    return decision;
   }
 
   /**
@@ -434,7 +455,40 @@ export class PokerAI {
     // Check if it's profitable to call (hand strength vs pot odds)
     const shouldCall = handStrength >= potOdds;
 
-    // Decision logic based on hand strength
+    console.log('DEBUG decideAction: callAmount =', callAmount, 'phase =', phase, 'handStrength =', handStrength.toFixed(3));
+
+    // Pre-flop specific logic: Be more willing to see the flop
+    // Only fold truly terrible hands with large bets to call
+    if (phase === 'preflop') {
+      // Pre-flop: almost always see the flop unless call is very expensive
+      const callPercentage = callAmount / playerChips;
+      
+      console.log('DEBUG preflop branch: callPercentage =', callPercentage.toFixed(3), 'thresholds.raise =', thresholds.raise);
+      
+      if (handStrength >= thresholds.raise) {
+        console.log('DEBUG: Taking RAISE branch (strong preflop hand)');
+        // Strong preflop hand - raise
+        const raiseAmount = this.calculateRaiseAmount(callAmount, playerChips, handStrength, phase);
+        return {
+          action: 'raise',
+          amount: raiseAmount,
+          reasoning: `Strong preflop hand (${(handStrength * 100).toFixed(0)}% equity) - raising`
+        };
+      } else if (callPercentage > 0.3 && handStrength < 0.15) {
+        console.log('DEBUG: Taking FOLD branch (expensive call + weak hand)');
+        // Only fold preflop if call is expensive (>30% of chips) AND hand is truly terrible
+        return { action: 'fold', reasoning: `Weak preflop hand and expensive call (${(callPercentage * 100).toFixed(0)}% of chips) - folding` };
+      } else {
+        console.log('DEBUG: Taking CALL branch (see the flop)');
+        // Call to see the flop
+        return {
+          action: 'call',
+          reasoning: `Preflop - calling ${callAmount} to see the flop (${(handStrength * 100).toFixed(0)}% equity)`
+        };
+      }
+    }
+
+    // Post-flop decision logic
     if (handStrength >= thresholds.raise) {
       // Strong hand - raise or call
       if (this.shouldRaise(handStrength, callAmount, playerChips, phase)) {
@@ -459,13 +513,16 @@ export class PokerAI {
     } else {
       // Weak hand - only fold if pot odds are very unfavorable
       // Otherwise call to see if hand improves
+      console.log('DEBUG: Weak hand branch - potOdds =', potOdds.toFixed(3), 'handStrength =', handStrength.toFixed(3));
       if (potOdds > 0.4 || handStrength > 0.1) {
+        console.log('DEBUG: Taking CALL branch (pot odds or some chance)');
         // Good pot odds or some chance of improvement
         return {
           action: 'call',
           reasoning: `Weak hand (${(handStrength * 100).toFixed(0)}% win probability) but good pot odds - calling to see more cards`
         };
       } else {
+        console.log('DEBUG: Taking FOLD branch (very weak + poor pot odds)');
         // Very unfavorable situation - fold
         return { action: 'fold', reasoning: 'Very weak hand and poor pot odds - folding' };
       }

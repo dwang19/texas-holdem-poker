@@ -92,7 +92,8 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
           {player.cards.map((card, index) => {
             // For AI cards during showdown flip, show as hidden initially, then flip
             const shouldFlip = !player.isHuman && aiCardsFlipping && gamePhase === 'showdown' && !player.hasFolded;
-            const shouldHide = (!player.isHuman && gamePhase !== 'showdown' && !shouldFlip) || player.hasFolded;
+            // Hide AI cards when not in showdown, but keep human cards visible even if they folded
+            const shouldHide = !player.isHuman && gamePhase !== 'showdown' && !shouldFlip;
             
             // During showdown, determine if this card is used in the best hand
             const isUsedInHand = isShowdown && usedHoleCardIndices.includes(index);

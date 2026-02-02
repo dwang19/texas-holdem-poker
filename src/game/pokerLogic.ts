@@ -300,13 +300,60 @@ const isConsecutive = (ranks: number[]): boolean => {
 };
 
 // Helper function to get readable rank name
-const getRankName = (rank: number): string => {
+export const getRankName = (rank: number): string => {
   switch (rank) {
     case 14: return 'Ace';
     case 13: return 'King';
     case 12: return 'Queen';
     case 11: return 'Jack';
     default: return rank.toString();
+  }
+};
+
+/**
+ * Get the kicker card from a poker hand (the highest non-pair/non-trips card)
+ * Returns the description with kicker info for tie-breaking scenarios
+ */
+export const getDescriptionWithKicker = (hand: PokerHand): string => {
+  const handCards = hand.cards;
+  
+  switch (hand.type) {
+    case 'pair': {
+      // For a pair, kicker is the 3rd card (first non-pair card)
+      const pairRank = handCards[0].rank; // First two cards are the pair
+      const kicker = handCards.find(c => c.rank !== pairRank);
+      if (kicker) {
+        return `${hand.description} (${getRankName(kicker.rank)} high)`;
+      }
+      return hand.description;
+    }
+    case 'two-pair': {
+      // For two pair, kicker is the 5th card
+      const kicker = handCards[4];
+      if (kicker) {
+        return `${hand.description} (${getRankName(kicker.rank)} kicker)`;
+      }
+      return hand.description;
+    }
+    case 'three-of-a-kind': {
+      // For trips, kicker is the 4th card
+      const tripsRank = handCards[0].rank;
+      const kicker = handCards.find(c => c.rank !== tripsRank);
+      if (kicker) {
+        return `${hand.description} (${getRankName(kicker.rank)} high)`;
+      }
+      return hand.description;
+    }
+    case 'high-card': {
+      // For high card, already has the high card in description
+      // But we can add the second highest for more detail
+      if (handCards.length >= 2) {
+        return `${hand.description} (${getRankName(handCards[1].rank)} kicker)`;
+      }
+      return hand.description;
+    }
+    default:
+      return hand.description;
   }
 };
 

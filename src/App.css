@@ -78,6 +78,16 @@
   z-index: 100;
 }
 
+/* Make non-highlighted cards brighter during showdown */
+.game-container.showdown-active .player-cards .card:not(.card--highlighted),
+.game-container.showdown-active .community-cards .card:not(.card--highlighted) {
+  filter: brightness(1.1);
+  box-shadow: 
+    0 0 10px rgba(255, 255, 255, 0.3),
+    0 0 20px rgba(255, 255, 255, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
 /* Main Game Layout */
 .main-game-layout {
   display: flex;
