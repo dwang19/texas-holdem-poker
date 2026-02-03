@@ -1148,7 +1148,7 @@ function App() {
         validationResult = validateCallAction(currentPlayer, currentBet, gamePhase);
         break;
       case 'raise':
-        validationResult = validateRaiseAction(currentPlayer, currentBet, raiseAmount, gamePhase);
+        validationResult = validateRaiseAction(currentPlayer, currentBet, raiseAmount === '' ? '5' : raiseAmount, gamePhase);
         break;
     }
 
