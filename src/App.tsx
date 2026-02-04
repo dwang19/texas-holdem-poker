@@ -78,6 +78,21 @@ function App() {
   const logEntriesRef = useRef<HTMLDivElement>(null);
   const [hoveredPlayerHand, setHoveredPlayerHand] = useState<'human' | 'ai' | null>(null);
 
+  // Chip accounting verification function - helps catch bugs early
+  // Total chips + pot should always equal $200 (starting chips for 2 players)
+  const verifyChipAccounting = (playersToCheck: Player[], potToCheck: number, context: string) => {
+    const totalChips = playersToCheck.reduce((sum, p) => sum + p.chips, 0);
+    const total = totalChips + potToCheck;
+    if (total !== 200) {
+      console.error(`CHIP ACCOUNTING ERROR at ${context}!`);
+      console.error(`Total: $${total}, Expected: $200, Difference: $${total - 200}`);
+      console.error('Players:', playersToCheck.map(p => ({ name: p.name, chips: p.chips, currentBet: p.currentBet })));
+      console.error('Pot:', potToCheck);
+    } else {
+      console.log(`DEBUG: Chip accounting verified at ${context} - Total: $${total}`);
+    }
+  };
+
   // Auto-scroll to bottom when new log entries are added
   useEffect(() => {
     if (logEntriesRef.current) {
@@ -196,14 +211,8 @@ function App() {
     console.log('DEBUG: handleFoldWinWithPot - updated players:', updatedPlayers.map(p => ({ name: p.name, chips: p.chips })));
     console.log('DEBUG: handleFoldWinWithPot - setting handComplete to true');
     
-    // Verify total chips (should always be $200)
-    const totalChips = updatedPlayers.reduce((sum, p) => sum + p.chips, 0);
-    console.log('DEBUG: handleFoldWinWithPot - total chips after award:', totalChips, '(expected: 200)');
-    if (totalChips !== 200) {
-      console.error('CHIP ACCOUNTING ERROR in handleFoldWinWithPot! Total chips:', totalChips, 'Expected: 200');
-      console.error('Players:', updatedPlayers.map(p => ({ name: p.name, chips: p.chips })));
-      console.error('Pot awarded:', potAmount);
-    }
+    // Verify chip accounting - pot has been awarded so pot should now be 0
+    verifyChipAccounting(updatedPlayers, 0, 'handleFoldWinWithPot (after pot awarded)');
     
     setPlayers(updatedPlayers);
     setWinner(remainingPlayer);
@@ -236,11 +245,13 @@ function App() {
     }
   };
 
-  const determineWinner = (potOverride?: number) => {
-    console.log('DEBUG: determineWinner called with potOverride:', potOverride);
-    const activePlayers = players.filter(p => !p.hasFolded);
+  const determineWinner = (potOverride?: number, playersOverride?: Player[]) => {
+    console.log('DEBUG: determineWinner called with potOverride:', potOverride, 'playersOverride:', !!playersOverride);
+    // FIX: Use playersOverride if provided to avoid stale React state issues
+    const currentPlayers = playersOverride || players;
+    const activePlayers = currentPlayers.filter(p => !p.hasFolded);
 
-    let updatedPlayers = [...players];
+    let updatedPlayers = [...currentPlayers];
     let winningPlayer: Player | null = null;
     let showdownHands: { player: Player; pokerHand: PokerHand; isWinner: boolean }[] = [];
     let communityCardsUsed: CardType[] = [];
@@ -249,7 +260,7 @@ function App() {
     // CRITICAL FIX: Use potOverride if provided (to avoid stale state issues),
     // otherwise use the pot state variable which contains the accumulated pot from ALL betting rounds.
     // currentBet values only contain the CURRENT betting round's bets (they get reset each phase).
-    const calculatedPotAmount = players.reduce((sum, player) => sum + player.currentBet, 0);
+    const calculatedPotAmount = currentPlayers.reduce((sum, player) => sum + player.currentBet, 0);
     
     // Priority: 1) potOverride (passed directly to avoid stale state), 2) pot state, 3) calculated from currentBet
     let potAmount: number;
@@ -265,7 +276,7 @@ function App() {
     }
     
     console.log('DEBUG: determineWinner - pot state:', pot, 'potOverride:', potOverride, 'calculated from currentBet:', calculatedPotAmount, 'FINAL potAmount:', potAmount);
-    console.log('DEBUG: determineWinner - player chips before award:', players.map(p => ({ name: p.name, chips: p.chips, currentBet: p.currentBet })));
+    console.log('DEBUG: determineWinner - player chips before award:', currentPlayers.map(p => ({ name: p.name, chips: p.chips, currentBet: p.currentBet })));
 
     if (activePlayers.length === 1) {
       // Only one player left, they win by default
@@ -364,14 +375,8 @@ function App() {
     console.log('DEBUG: determineWinner - player chips AFTER award:', updatedPlayers.map(p => ({ name: p.name, chips: p.chips })));
     console.log('DEBUG: determineWinner - awarding potAmount:', potAmount, 'to winner:', winningPlayer?.name);
     
-    // Verify total chips (should always be $200)
-    const totalChips = updatedPlayers.reduce((sum, p) => sum + p.chips, 0);
-    console.log('DEBUG: determineWinner - total chips after award:', totalChips, '(expected: 200)');
-    if (totalChips !== 200) {
-      console.error('CHIP ACCOUNTING ERROR in determineWinner! Total chips:', totalChips, 'Expected: 200');
-      console.error('Players:', updatedPlayers.map(p => ({ name: p.name, chips: p.chips })));
-      console.error('Pot awarded:', potAmount);
-    }
+    // Verify chip accounting - pot has been awarded so pot should now be 0
+    verifyChipAccounting(updatedPlayers, 0, 'determineWinner (after pot awarded)');
     
     setPlayers(updatedPlayers);
     setWinner(winningPlayer);
@@ -418,6 +423,10 @@ function App() {
   const dealNewHand = (playersToUse?: Player[]) => {
     // Use provided players or fall back to current state
     const currentPlayers = playersToUse || players;
+    
+    // Verify chip accounting at start of new hand - pot should be 0 from previous round
+    verifyChipAccounting(currentPlayers, 0, 'dealNewHand (start of new hand)');
+    
     console.log('DEBUG: dealNewHand called with playersToUse?', !!playersToUse);
     console.log('DEBUG: dealNewHand - currentPlayers[0] (human):', 
       'name=' + currentPlayers[0].name,
@@ -460,6 +469,9 @@ function App() {
       }
       return player;
     });
+
+    // Verify chip accounting after blinds posted - pot will be $15
+    verifyChipAccounting(playersWithBlinds, SMALL_BLIND + BIG_BLIND, 'dealNewHand (after blinds posted)');
 
     setDeck(newDeck);
     setPlayers(playersWithBlinds);
@@ -523,12 +535,9 @@ function App() {
   const startNextRound = () => {
     console.log('DEBUG: startNextRound called, current players chips:', players.map(p => ({ name: p.name, chips: p.chips })));
     
-    // Verify total chips (should always be $200)
-    const totalChips = players.reduce((sum, p) => sum + p.chips, 0);
-    console.log('DEBUG: startNextRound - total chips:', totalChips, '(expected: 200)');
-    if (totalChips !== 200) {
-      console.error('CHIP ACCOUNTING ERROR! Total chips:', totalChips, 'Expected: 200');
-    }
+    // Verify chip accounting at start of next round - pot should be 0
+    verifyChipAccounting(players, 0, 'startNextRound (before blind rotation)');
+    
     // Rotate blind positions - chips persist across hands
     const nextRoundPlayers = players.map(player => ({
       ...player,
@@ -580,31 +589,34 @@ function App() {
   };
 
   // Function to transition to the next game phase
-  const advanceGamePhase = (potValue?: number) => {
-    console.log('DEBUG: advanceGamePhase called, players at start:', players.map(p => ({ name: p.name, chips: p.chips })));
+  const advanceGamePhase = (potValue?: number, playersOverride?: Player[]) => {
+    // FIX: Use playersOverride if provided to avoid stale React state issues
+    const currentPlayers = playersOverride || players;
+    console.log('DEBUG: advanceGamePhase called, players at start:', currentPlayers.map(p => ({ name: p.name, chips: p.chips })));
 
     // Use provided potValue or get latest from state to avoid stale closure
     const potToLog = potValue !== undefined ? potValue : pot;
 
-    const activePlayers = players.filter(p => !p.hasFolded);
+    const activePlayers = currentPlayers.filter(p => !p.hasFolded);
 
     // If only one player remains (someone folded), award pot immediately
     if (activePlayers.length <= 1) {
       console.log('DEBUG: advanceGamePhase - only one active player, awarding pot');
       setCurrentPlayerIndex(-1);
-      setTimeout(() => {
-        // Use functional updates to get latest state
-        setPot(prevPot => {
-          setPlayers(prevPlayers => {
-            const latestActivePlayers = prevPlayers.filter(p => !p.hasFolded);
-            if (latestActivePlayers.length === 1) {
-              handleFoldWinWithPot(latestActivePlayers[0], prevPot, prevPlayers);
-            }
-            return prevPlayers;
-          });
-          return prevPot;
-        });
-      }, 500);
+      
+      // FIX: Use values already computed at function call time instead of nested state updates
+      // The nested setPot/setPlayers pattern was causing race conditions where the outer
+      // functional updates would overwrite the changes made by handleFoldWinWithPot
+      const potToAward = potToLog; // Use the pot value computed at function start
+      const remainingPlayer = activePlayers[0];
+      
+      if (remainingPlayer) {
+        setTimeout(() => {
+          // Pass the captured values directly - handleFoldWinWithPot will properly
+          // update state without being overwritten by outer functional updates
+          handleFoldWinWithPot(remainingPlayer, potToAward, currentPlayers);
+        }, 500);
+      }
       return;
     }
 
@@ -623,7 +635,7 @@ function App() {
       setGamePhase('showdown');
       setCurrentPlayerIndex(-1);
       setTimeout(() => {
-        determineWinner(potToLog);
+        determineWinner(potToLog, currentPlayers);
       }, 500);
       return;
     }
@@ -675,7 +687,7 @@ function App() {
         console.log('DEBUG: River to Showdown - potToLog:', potToLog);
         
         // Check if both players are still active (showdown scenario)
-        const activePlayersAtShowdown = players.filter(p => !p.hasFolded);
+        const activePlayersAtShowdown = currentPlayers.filter(p => !p.hasFolded);
         console.log('DEBUG: River to Showdown - activePlayersAtShowdown:', activePlayersAtShowdown.length);
         if (activePlayersAtShowdown.length > 1) {
           // Trigger flip animation for AI cards
@@ -683,7 +695,7 @@ function App() {
           setAiCardsFlipping(true);
           // After flip animation completes, determine winner
           setTimeout(() => {
-            determineWinner(potToLog);
+            determineWinner(potToLog, currentPlayers);
             setIsDealing(false);
             // Reset flip animation state after animation completes
             setTimeout(() => {
@@ -694,7 +706,7 @@ function App() {
           // Only one player left, no flip needed
           console.log('DEBUG: Only one player active, skipping flip animation');
           setTimeout(() => {
-            determineWinner(potToLog);
+            determineWinner(potToLog, currentPlayers);
             setIsDealing(false);
           }, 500);
         }
@@ -974,7 +986,7 @@ function App() {
       if (aiBettingRoundComplete) {
         // Advance to next phase
         console.log('DEBUG: AI action completed betting round, advancing to next phase');
-        advanceGamePhase(updatedPot);
+        advanceGamePhase(updatedPot, updatedPlayers);
         return;
       }
 
@@ -1295,7 +1307,7 @@ function App() {
       setAiCardsFlipping(true);
       const potToAward = newPot; // Capture pot value to avoid stale closure
       setTimeout(() => {
-        determineWinner(potToAward);
+        determineWinner(potToAward, newPlayers);
         // Reset flip animation state after animation completes
         setTimeout(() => {
           setAiCardsFlipping(false);
@@ -1307,7 +1319,7 @@ function App() {
     if (bettingRoundComplete) {
       // Advance to next phase
       console.log('DEBUG: About to call advanceGamePhase, updated players:', newPlayers.map(p => ({ name: p.name, chips: p.chips })));
-      advanceGamePhase(newPot);
+      advanceGamePhase(newPot, newPlayers);
       return;
     }
 
