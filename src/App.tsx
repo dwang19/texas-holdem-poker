@@ -1114,6 +1114,19 @@ function App() {
       return { valid: false, reason: `Insufficient chips. Need at least $${minRaise} to raise, but only have $${player.chips}` };
     }
 
+    // Check if opponent can afford to call this raise
+    const opponent = players.find(p => !p.hasFolded && p.id !== player.id);
+    if (opponent) {
+      // Opponent needs to call: currentBet - opponent.currentBet + raiseAmount
+      const opponentCallAmount = (currentBet - opponent.currentBet) + raiseAmount;
+      if (opponentCallAmount > opponent.chips) {
+        return {
+          valid: false,
+          reason: `Raise too large. Opponent can only afford to call $${opponent.chips - (currentBet - opponent.currentBet)}. Maximum raise: $${opponent.chips - (currentBet - opponent.currentBet)}`
+        };
+      }
+    }
+
     return { valid: true, totalRaiseAmount: minRaise, minRaise: raiseAmount };
   };
 
@@ -1655,10 +1668,17 @@ function App() {
                             className="raise-arrow raise-up"
                             onClick={() => {
                               const currentValue = raiseAmount === '' ? 5 : parseInt(raiseAmount);
-                              const newValue = Math.min(currentValue + 5, humanPlayer.chips);
+                              const opponent = players.find(p => !p.hasFolded && !p.isHuman);
+                              // Calculate maximum raise considering opponent's ability to call
+                              const maxRaiseByOpponent = opponent ? opponent.chips - (currentBet - opponent.currentBet) : humanPlayer.chips;
+                              const maxRaise = Math.min(humanPlayer.chips, maxRaiseByOpponent);
+                              const newValue = Math.min(currentValue + 5, maxRaise);
                               setRaiseAmount(newValue.toString());
                             }}
-                            disabled={!isPlayerTurn || humanPlayer.chips === 0 || (raiseAmount !== '' && parseInt(raiseAmount) >= humanPlayer.chips)}
+                            disabled={!isPlayerTurn || humanPlayer.chips === 0 || (raiseAmount !== '' && parseInt(raiseAmount) >= Math.min(humanPlayer.chips, (() => {
+                              const opponent = players.find(p => !p.hasFolded && !p.isHuman);
+                              return opponent ? opponent.chips - (currentBet - opponent.currentBet) : humanPlayer.chips;
+                            })()))}
                             title="Increase raise amount"
                           >
                             ▲
