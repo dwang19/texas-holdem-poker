@@ -245,10 +245,12 @@ function App() {
     }
   };
 
-  const determineWinner = (potOverride?: number, playersOverride?: Player[]) => {
-    console.log('DEBUG: determineWinner called with potOverride:', potOverride, 'playersOverride:', !!playersOverride);
-    // FIX: Use playersOverride if provided to avoid stale React state issues
+  const determineWinner = (potOverride?: number, playersOverride?: Player[], communityCardsOverride?: CardType[]) => {
+    // FIX: Use overrides if provided to avoid stale React state closure issues
     const currentPlayers = playersOverride || players;
+    const currentCommunityCards = communityCardsOverride || communityCards;
+    console.log('DEBUG: determineWinner called with potOverride:', potOverride, 'playersOverride:', !!playersOverride, 'communityCardsOverride:', !!communityCardsOverride);
+
     const activePlayers = currentPlayers.filter(p => !p.hasFolded);
 
     let updatedPlayers = [...currentPlayers];
@@ -288,20 +290,20 @@ function App() {
       );
 
       // For showdown display, still evaluate the hand
-      const playerHand = evaluateHand(winningPlayer.cards, communityCards);
+      const playerHand = evaluateHand(winningPlayer.cards, currentCommunityCards);
       showdownHands = [{
         player: winningPlayer,
         pokerHand: playerHand,
         isWinner: true
       }];
       communityCardsUsed = playerHand.cards.filter(card =>
-        communityCards.some(commCard => commCard.rank === card.rank && commCard.suit === card.suit)
+        currentCommunityCards.some(commCard => commCard.rank === card.rank && commCard.suit === card.suit)
       );
     } else {
       // Multiple players still active, evaluate hands
       const playerHands: { player: Player; hand: PokerHand }[] = activePlayers.map(player => ({
         player,
-        hand: evaluateHand(player.cards, communityCards)
+        hand: evaluateHand(player.cards, currentCommunityCards)
       }));
 
       // Find the best hand and check for ties
@@ -360,7 +362,7 @@ function App() {
 
       // Get community cards used in the winning hand (or first player's hand in case of tie)
       communityCardsUsed = playerHands[bestHandIndex].hand.cards.filter(card =>
-        communityCards.some(commCard => commCard.rank === card.rank && commCard.suit === card.suit)
+        currentCommunityCards.some(commCard => commCard.rank === card.rank && commCard.suit === card.suit)
       );
     }
 
@@ -588,6 +590,132 @@ function App() {
       .filter(idx => idx !== -1);
   };
 
+  // Function to deal remaining community cards when all players are all-in, then go to showdown
+  const dealRemainingCommunityCards = (currentDeck: Deck, currentPhase: string, potToLog: number, currentPlayers: Player[]) => {
+    // Determine which cards still need to be dealt based on current phase
+    type PhaseDeal = { burn: boolean; cards: number; phaseName: string };
+    const remainingPhases: PhaseDeal[] = [];
+
+    if (currentPhase === 'preflop' || currentPhase === 'waiting') {
+      remainingPhases.push({ burn: true, cards: 3, phaseName: 'flop' });   // flop: burn 1, deal 3
+      remainingPhases.push({ burn: true, cards: 1, phaseName: 'turn' });   // turn: burn 1, deal 1
+      remainingPhases.push({ burn: true, cards: 1, phaseName: 'river' });  // river: burn 1, deal 1
+    } else if (currentPhase === 'flop') {
+      remainingPhases.push({ burn: true, cards: 1, phaseName: 'turn' });
+      remainingPhases.push({ burn: true, cards: 1, phaseName: 'river' });
+    } else if (currentPhase === 'turn') {
+      remainingPhases.push({ burn: true, cards: 1, phaseName: 'river' });
+    }
+    // If already at river or showdown, nothing to deal
+
+    if (remainingPhases.length === 0) {
+      // Already at river/showdown - just determine winner
+      setGamePhase('showdown');
+      setCurrentPlayerIndex(-1);
+      setAiCardsFlipping(true);
+      setTimeout(() => {
+        determineWinner(potToLog, currentPlayers, communityCards);
+        setTimeout(() => setAiCardsFlipping(false), 1000);
+      }, 1000);
+      return;
+    }
+
+    setIsDealing(true);
+
+    // Flip AI cards face-up first so user can watch the runout
+    setAiCardsFlipping(true);
+
+    // Pre-deal all cards from deck upfront (avoids timing issues with mutable deck in setTimeout)
+    const preDealtCards: { type: 'burn' | 'community'; card: CardType; phaseIndex: number }[] = [];
+    remainingPhases.forEach((phase, phaseIndex) => {
+      if (phase.burn) {
+        preDealtCards.push({ type: 'burn', card: currentDeck.dealCard()!, phaseIndex });
+      }
+      for (let i = 0; i < phase.cards; i++) {
+        preDealtCards.push({ type: 'community', card: currentDeck.dealCard()!, phaseIndex });
+      }
+    });
+
+    // Build final community cards array (for passing to determineWinner later)
+    const finalCommunityCards: CardType[] = [
+      ...communityCards,
+      ...preDealtCards.filter(c => c.type === 'community').map(c => c.card)
+    ];
+
+    // Animate dealing with staggered timing
+    let totalDelay = 600; // initial delay for AI card flip
+    let currentBurnIndex = burnedCards.length;
+    let currentCommunityIndex = communityCards.length;
+
+    let burnCardCounter = 0;
+    let communityCardCounter = 0;
+
+    remainingPhases.forEach((phase, phaseIndex) => {
+      // Burn card animation
+      if (phase.burn) {
+        const burnCard = preDealtCards.filter(c => c.type === 'burn')[burnCardCounter].card;
+        burnCardCounter++;
+        const burnIdx = currentBurnIndex;
+        currentBurnIndex++;
+        const burnDelay = totalDelay;
+        setTimeout(() => {
+          setBurnAnimatingIndex(burnIdx);
+          setBurnedCards(prev => [...prev, burnCard]);
+          setTimeout(() => setBurnAnimatingIndex(null), 500);
+        }, burnDelay);
+        totalDelay += 700;
+      }
+
+      // Deal community cards for this phase
+      const cardsForPhase = phase.cards;
+      for (let i = 0; i < cardsForPhase; i++) {
+        const card = preDealtCards.filter(c => c.type === 'community')[communityCardCounter].card;
+        communityCardCounter++;
+        const cardIdx = currentCommunityIndex;
+        currentCommunityIndex++;
+        const cardDelay = totalDelay;
+        setTimeout(() => {
+          setCommunityCards(prev => [...prev, card]);
+          setAnimatingCardIndices([cardIdx]);
+          setTimeout(() => setAnimatingCardIndices([]), 400);
+        }, cardDelay);
+        totalDelay += 600;
+      }
+
+      // Update the displayed phase name as we deal
+      const phaseNameDelay = totalDelay - 200;
+      const phaseName = phase.phaseName;
+      setTimeout(() => {
+        setGamePhase(phaseName as typeof gamePhase);
+        setGameLog(prev => [...prev, {
+          timestamp: new Date(),
+          message: `${phaseName.charAt(0).toUpperCase() + phaseName.slice(1)} dealt`
+        }]);
+      }, phaseNameDelay);
+
+      totalDelay += 400; // pause between phases
+    });
+
+    // After all cards dealt, go to showdown and determine winner
+    const showdownDelay = totalDelay;
+    setTimeout(() => {
+      setGamePhase('showdown');
+      setCurrentPlayerIndex(-1);
+      setIsDealing(false);
+      setAnimatingCardIndices([]);
+
+      // After flip animation completes, switch to normal render (which includes highlight glow)
+      setTimeout(() => {
+        setAiCardsFlipping(false);
+      }, 1000);
+
+      // Pass the pre-computed finalCommunityCards directly to avoid stale closure
+      setTimeout(() => {
+        determineWinner(potToLog, currentPlayers, finalCommunityCards);
+      }, 1200);
+    }, showdownDelay);
+  };
+
   // Function to transition to the next game phase
   const advanceGamePhase = (potValue?: number, playersOverride?: Player[]) => {
     // FIX: Use playersOverride if provided to avoid stale React state issues
@@ -620,10 +748,11 @@ function App() {
       return;
     }
 
-    // Check if all active players are all-in (have bet all their chips)
-    const allPlayersAllIn = activePlayers.every(player => player.chips === 0);
-    if (allPlayersAllIn) {
-      console.log('All active players are all-in, going to showdown');
+    // Check if any active player is all-in (has 0 chips) - in a 2-player game,
+    // once one player is all-in and betting round is complete, deal remaining cards automatically
+    const anyPlayerAllIn = activePlayers.some(player => player.chips === 0);
+    if (anyPlayerAllIn) {
+      console.log('At least one player is all-in, dealing remaining community cards');
       console.log('DEBUG: advanceGamePhase all-in - potToLog:', potToLog);
 
       // Log the pot value when all players go all-in
@@ -632,11 +761,9 @@ function App() {
         message: `Betting round complete - Pot: $${potToLog} (all players all-in)`
       }]);
 
-      setGamePhase('showdown');
+      // Deal remaining community cards with animation before going to showdown
       setCurrentPlayerIndex(-1);
-      setTimeout(() => {
-        determineWinner(potToLog, currentPlayers);
-      }, 500);
+      dealRemainingCommunityCards(deck, gamePhase, potToLog, currentPlayers);
       return;
     }
 
@@ -1278,41 +1405,36 @@ function App() {
       return;
     }
 
-    // Check if all active players are all-in (have 0 chips)
-    const allPlayersAllIn = activePlayers.every(player => player.chips === 0);
+    // Check if any active player is all-in (has 0 chips)
+    const anyPlayerAllIn = activePlayers.some(player => player.chips === 0);
 
-    if (activePlayers.length <= 1 || allPlayersAllIn) {
-      // Game should end if only one player remains or all are all-in
-      console.log('Ending hand - active players:', activePlayers.length, 'all all-in:', allPlayersAllIn);
-      console.log('DEBUG: handleBettingAction all-in - newPot:', newPot);
-      
-      // If only one player left (not due to fold, but due to all-in or other reasons), award pot
-      if (activePlayers.length === 1) {
-        console.log('DEBUG: handleBettingAction - only one player left (all-in scenario)');
-        setCurrentPlayerIndex(-1);
-        setTimeout(() => {
-          // Use the values we have to avoid stale closure
-          const remainingPlayer = activePlayers[0];
-          const potToAward = newPot;
-          handleFoldWinWithPot(remainingPlayer, potToAward, newPlayers);
-        }, 500);
-        return;
-      }
-      
-      // Multiple players still active (all-in scenario) - go to showdown
-      setGamePhase('showdown');
+    // If only one player left (edge case, not from fold)
+    if (activePlayers.length <= 1) {
+      console.log('DEBUG: handleBettingAction - only one player left');
       setCurrentPlayerIndex(-1);
-      
-      // Trigger flip animation for AI cards
-      setAiCardsFlipping(true);
-      const potToAward = newPot; // Capture pot value to avoid stale closure
-      setTimeout(() => {
-        determineWinner(potToAward, newPlayers);
-        // Reset flip animation state after animation completes
+      if (activePlayers.length === 1) {
         setTimeout(() => {
-          setAiCardsFlipping(false);
-        }, 1000); // Match animation duration
-      }, 1000); // Wait for flip animation
+          handleFoldWinWithPot(activePlayers[0], newPot, newPlayers);
+        }, 500);
+      }
+      return;
+    }
+
+    // If at least one player is all-in AND betting round is complete, deal remaining cards
+    if (bettingRoundComplete && anyPlayerAllIn) {
+      console.log('Ending hand - at least one player all-in, betting complete');
+      console.log('DEBUG: handleBettingAction all-in - newPot:', newPot);
+
+      setCurrentPlayerIndex(-1);
+
+      // Log the pot value
+      setGameLog(prev => [...prev, {
+        timestamp: new Date(),
+        message: `Betting round complete - Pot: $${newPot} (all-in)`
+      }]);
+
+      // Deal remaining community cards with animation before going to showdown
+      dealRemainingCommunityCards(deck, gamePhase, newPot, newPlayers);
       return;
     }
 
@@ -1328,6 +1450,13 @@ function App() {
     setCurrentPlayerIndex(nextPlayerIndex);
   };
 
+  // Handler for Enter key on initial screen
+  const handleInitialScreenKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && humanPlayerName.trim()) {
+      startGame();
+    }
+  };
+
   // Show initialization screen if game hasn't started
   if (!gameStarted) {
     return (
@@ -1340,7 +1469,7 @@ function App() {
         <main className="game-container">
           <div className="game-init-screen">
             <h2>Welcome to Texas Hold'em!</h2>
-            <div className="init-form">
+            <div className="init-form" onKeyPress={handleInitialScreenKeyPress}>
               <div className="form-group">
                 <label htmlFor="player-name">Your Name:</label>
                 <input
@@ -1401,41 +1530,35 @@ function App() {
     );
   }
 
-  // Show victory/defeat screen if game is over
-  if (gameOver && overallWinner) {
-    const isHumanWinner = overallWinner.isHuman;
-    return (
-      <div className="App">
-        <header className="App-header">
-          <h1>Texas Hold'em Poker</h1>
-          <p>A React + TypeScript Poker Game</p>
-        </header>
+  // Restart game - reset to Round 1 with same player name and blind assignment
+  const restartGame = () => {
+    console.log('DEBUG: restartGame called');
+    const initialPlayers = getInitialPlayers(humanPlayerName, humanIsBigBlindFirst);
+    setPlayers(initialPlayers);
+    setRoundNumber(1);
+    setGameOver(false);
+    setOverallWinner(null);
+    setGamePhase('waiting');
+    setWinner(null);
+    setHandComplete(false);
+    setCommunityCards([]);
+    setBurnedCards([]);
+    setPot(0);
+    setCurrentBet(0);
+    setCurrentPlayerIndex(0);
+    setDeck(createDeck());
+    setGameLog([{ timestamp: new Date(), message: `Game restarted! ${humanPlayerName} vs AI Player` }]);
+    
+    // Start new hand after a brief delay
+    setTimeout(() => {
+      dealNewHand(initialPlayers);
+    }, 100);
+  };
 
-        <main className="game-container">
-          <div className={`game-over-screen ${isHumanWinner ? 'victory' : 'defeat'}`}>
-            <h2>{isHumanWinner ? '🎉 Victory! 🎉' : '💔 Defeat 💔'}</h2>
-            <p className="winner-message">
-              {isHumanWinner
-                ? `Congratulations ${overallWinner.name}! You won all the chips!`
-                : `${overallWinner.name} won all the chips. Better luck next time!`
-              }
-            </p>
-            <div className="final-scores">
-              <h3>Final Scores:</h3>
-              {players.map(player => (
-                <p key={player.id}>
-                  {player.name}: ${player.chips}
-                </p>
-              ))}
-            </div>
-            <button className="start-over-button" onClick={resetGame}>
-              Start Over
-            </button>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  // Handler for quitting the game - returns to initial screen
+  const handleQuitGame = () => {
+    resetGame();
+  };
 
   return (
     <div className="App">
@@ -1732,8 +1855,39 @@ function App() {
 
 
         {/* Status Container - Shows AI actions during play, showdown/fold results when hand is complete */}
-        <div className={`status-container ${gamePhase === 'showdown' ? 'showdown-active' : ''} ${aiActionDisplay || gamePhase === 'showdown' || (handComplete && winner) ? 'visible' : 'hidden'}`}>
-          {(gamePhase === 'showdown' || (handComplete && winner)) && winner ? (
+        <div className={`status-container ${gameOver ? 'game-over-active' : ''} ${aiActionDisplay || gamePhase === 'showdown' || (handComplete && winner) || gameOver ? 'visible' : 'hidden'}`}>
+          {gameOver && overallWinner ? (
+            <div className="showdown-status-content game-over-content">
+              <div className="showdown-winner-info">
+                <span className="winner-crown">{overallWinner.isHuman ? '🎉' : '💔'}</span>
+                <span className="winner-name game-over-title">
+                  {overallWinner.isHuman ? 'Victory!' : 'Defeat'}
+                </span>
+              </div>
+              <div className="showdown-comparison">
+                <span className="comparison-text game-over-message">
+                  {overallWinner.isHuman
+                    ? `Congratulations ${overallWinner.name}! You won all the chips!`
+                    : `${overallWinner.name} won all the chips. Better luck next time!`
+                  }
+                </span>
+              </div>
+              <div className="game-over-buttons">
+                <button
+                  onClick={restartGame}
+                  className="next-round-btn restart-btn"
+                >
+                  Restart
+                </button>
+                <button
+                  onClick={handleQuitGame}
+                  className="next-round-btn quit-btn"
+                >
+                  Quit
+                </button>
+              </div>
+            </div>
+          ) : (gamePhase === 'showdown' || (handComplete && winner)) && winner ? (
             <div className="showdown-status-content">
               <div className="showdown-winner-info">
                 <span className="winner-crown">{showdownData?.isTie ? '🤝' : '👑'}</span>
@@ -1801,7 +1955,13 @@ function App() {
                 </div>
               ) : (
                 <div className="showdown-comparison">
-                  <span className="comparison-text">Opponent folded</span>
+                  <span className="comparison-text">
+                    {(() => {
+                      // Find the player who folded
+                      const foldedPlayer = players.find(p => p.hasFolded);
+                      return foldedPlayer ? `${foldedPlayer.name} folded` : 'Opponent folded';
+                    })()}
+                  </span>
                 </div>
               )}
               {handComplete && !gameOver && (

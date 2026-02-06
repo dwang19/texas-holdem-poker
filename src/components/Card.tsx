@@ -101,7 +101,7 @@ const Card: React.FC<CardProps> = ({
   // If flipping, show both back and front with flip animation
   if (isFlipping) {
     return (
-      <div className={`card card--${size} ${flipClass} ${className}`}>
+      <div className={`card card--${size} ${flipClass} ${highlightClass} ${className}`}>
         <div className="card__flip-container">
           <div className="card__flip-back">
             <div className="card__back">

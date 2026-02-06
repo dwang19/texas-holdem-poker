@@ -1316,17 +1316,17 @@
   animation: aiActionSlideIn 0.5s ease-out;
 }
 
-/* Enhanced Status Container during Showdown */
-.status-container.showdown-active {
+/* Enhanced Status Container during Game Over - Black background with gold border */
+.status-container.game-over-active {
   border: 3px solid rgba(255, 215, 0, 0.8);
   box-shadow: 
     0 0 30px rgba(255, 215, 0, 0.4),
     0 8px 32px rgba(0, 0, 0, 0.2);
   background: rgba(0, 0, 0, 0.85);
-  animation: showdownStatusGlow 2s ease-in-out infinite alternate;
+  animation: gameOverStatusGlow 2s ease-in-out infinite alternate;
 }
 
-@keyframes showdownStatusGlow {
+@keyframes gameOverStatusGlow {
   0% {
     box-shadow: 
       0 0 30px rgba(255, 215, 0, 0.4),
@@ -1347,6 +1347,7 @@
   gap: var(--gap-large);
   flex-wrap: wrap;
   padding: var(--gap-small) 0;
+  min-height: 48px;
 }
 
 .showdown-winner-info {
@@ -1422,6 +1423,47 @@
 
 .next-round-btn:active {
   transform: translateY(0);
+}
+
+/* Game Over Content Styling */
+.game-over-content {
+  gap: var(--gap-medium);
+  padding: var(--gap-small) 0;
+  min-height: 48px;
+}
+
+.game-over-title {
+  font-size: 24px !important;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.game-over-message {
+  font-size: 15px !important;
+  text-align: center;
+}
+
+.game-over-buttons {
+  display: flex;
+  gap: var(--gap-medium);
+}
+
+.restart-btn {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.restart-btn:hover {
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+}
+
+.quit-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.quit-btn:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
 }
 
 .ai-action-content {
