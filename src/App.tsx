@@ -1492,7 +1492,7 @@ function App() {
                       checked={humanIsBigBlindFirst}
                       onChange={() => setHumanIsBigBlindFirst(true)}
                     />
-                    You start as Big Blind
+                    Big Blind ($10)
                   </label>
                   <label>
                     <input
@@ -1501,7 +1501,7 @@ function App() {
                       checked={!humanIsBigBlindFirst}
                       onChange={() => setHumanIsBigBlindFirst(false)}
                     />
-                    AI starts as Big Blind (You are Small Blind)
+                    Small Blind ($5)
                   </label>
                 </div>
               </div>
@@ -1510,7 +1510,6 @@ function App() {
                 <h3>Game Rules:</h3>
                 <ul>
                   <li>Each player starts with $100</li>
-                  <li>Small Blind: $5, Big Blind: $10</li>
                   <li>Blind positions alternate each round</li>
                   <li>Play continues until one player cannot afford the big blind ($10)</li>
                 </ul>
@@ -1866,10 +1865,25 @@ function App() {
               </div>
               <div className="showdown-comparison">
                 <span className="comparison-text game-over-message">
-                  {overallWinner.isHuman
-                    ? `Congratulations ${overallWinner.name}! You won all the chips!`
-                    : `${overallWinner.name} won all the chips. Better luck next time!`
-                  }
+                  {(() => {
+                    // Find the losing player
+                    const loser = players.find(p => p.id !== overallWinner.id);
+                    const loserHasChips = loser && loser.chips > 0;
+                    
+                    if (overallWinner.isHuman) {
+                      if (loserHasChips) {
+                        return `Congratulations ${overallWinner.name}! You won - opponent cannot afford the big blind!`;
+                      } else {
+                        return `Congratulations ${overallWinner.name}! You won all the chips!`;
+                      }
+                    } else {
+                      if (loserHasChips) {
+                        return `${overallWinner.name} won - you cannot afford the big blind. Better luck next time!`;
+                      } else {
+                        return `${overallWinner.name} won all the chips. Better luck next time!`;
+                      }
+                    }
+                  })()}
                 </span>
               </div>
               <div className="game-over-buttons">
