@@ -248,8 +248,10 @@
 .player-cards {
   display: flex;
   justify-content: center;
+  align-items: center;
   cursor: default;
   transition: all 0.3s ease;
+  min-height: 112px; /* Reserve space for medium cards (80x112) to prevent layout shift */
 }
 
 .player-cards.showdown-cards {

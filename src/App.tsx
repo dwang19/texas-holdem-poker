@@ -47,13 +47,13 @@ function App() {
     },
   ];
 
-  const [players, setPlayers] = useState<Player[]>(getInitialPlayers('Player1', false));
+  const [players, setPlayers] = useState<Player[]>(getInitialPlayers('Player1', true));
   const [deck, setDeck] = useState<Deck>(createDeck());
   const [communityCards, setCommunityCards] = useState<CardType[]>([]);
   const [burnedCards, setBurnedCards] = useState<CardType[]>([]);
   const [pot, setPot] = useState<number>(0);
   const [currentBet, setCurrentBet] = useState<number>(0);
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState<number>(0);
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState<number>(-1);
   const [gamePhase, setGamePhase] = useState<'waiting' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown'>('waiting');
   const [raiseAmount, setRaiseAmount] = useState<string>('');
   const [aiPersonality] = useState<AIPersonality>('balanced'); // Hardcoded to balanced
@@ -72,7 +72,7 @@ function App() {
   const [aiActionDisplay, setAiActionDisplay] = useState<{action: string, amount?: number, isThinking: boolean} | null>(null);
   const [phaseAnnouncement, setPhaseAnnouncement] = useState<string | null>(null);
   const [playerLastActions, setPlayerLastActions] = useState<Record<string, string>>({});
-  const [gameLog, setGameLog] = useState<Array<{timestamp: Date, message: string}>>([]);
+  const [gameLog, setGameLog] = useState<Array<{timestamp: Date, message: string}>>([{ timestamp: new Date(), message: 'Game started! Player1 vs AI Player' }]);
   const [aiCardsFlipping, setAiCardsFlipping] = useState<boolean>(false);
   const [lastPotWon, setLastPotWon] = useState<number>(0);
   const logEntriesRef = useRef<HTMLDivElement>(null);
@@ -134,31 +134,129 @@ function App() {
     
   }, [currentPlayerIndex, gamePhase, isDealing, holeCardAnimating, players, pot, currentBet, aiActionDisplay]);
 
+  // Reactively update player names and blind positions on the landing page
+  useEffect(() => {
+    if (!gameStarted) {
+      setPlayers(prev => prev.map(player =>
+        player.isHuman
+          ? { ...player, name: humanPlayerName, isSmallBlind: !humanIsBigBlindFirst, isBigBlind: humanIsBigBlindFirst }
+          : { ...player, isSmallBlind: humanIsBigBlindFirst, isBigBlind: !humanIsBigBlindFirst }
+      ));
+      setGameLog([{ timestamp: new Date(), message: `Game started! ${humanPlayerName} vs AI Player` }]);
+    }
+  }, [humanPlayerName, humanIsBigBlindFirst, gameStarted]);
+
   // Start the game with initialization parameters
   const startGame = () => {
     console.log('DEBUG: startGame called');
     console.log('DEBUG: humanIsBigBlindFirst =', humanIsBigBlindFirst);
     const initialPlayers = getInitialPlayers(humanPlayerName, humanIsBigBlindFirst);
-    console.log('DEBUG: Initial players[0] (human):', 
-      'name=' + initialPlayers[0].name,
-      'isSmallBlind=' + initialPlayers[0].isSmallBlind,
-      'isBigBlind=' + initialPlayers[0].isBigBlind
-    );
-    console.log('DEBUG: Initial players[1] (ai):', 
-      'name=' + initialPlayers[1].name,
-      'isSmallBlind=' + initialPlayers[1].isSmallBlind,
-      'isBigBlind=' + initialPlayers[1].isBigBlind
-    );
-    setPlayers(initialPlayers);
+
+    // Step 1: Dismiss overlay and reset state
     setGameStarted(true);
     setRoundNumber(1);
     setGameOver(false);
     setOverallWinner(null);
+    setPlayers(initialPlayers);
+    setCommunityCards([]);
+    setBurnedCards([]);
+    setPot(0);
+    setCurrentBet(0);
+    setCurrentPlayerIndex(-1);
+    setRaiseAmount('');
+    setWinner(null);
+    setHandComplete(false);
+    setPlayerLastActions({});
+    setShowdownData(null);
+    setAiCardsFlipping(false);
+    setLastPotWon(0);
     setGameLog([{ timestamp: new Date(), message: `Game started! ${humanPlayerName} vs AI Player` }]);
-    // Trigger the first hand deal - use initialPlayers directly to avoid stale state
+
+    // Step 2: After overlay fades, post blinds with animation
     setTimeout(() => {
-      dealNewHand(initialPlayers);
-    }, 100);
+      const SMALL_BLIND = 5;
+      const BIG_BLIND = 10;
+      const newDeck = createDeck();
+      setDeck(newDeck);
+
+      const sbPlayer = initialPlayers.find(p => p.isSmallBlind)!;
+      const bbPlayer = initialPlayers.find(p => p.isBigBlind)!;
+
+      const playersWithBlinds = initialPlayers.map(player => {
+        if (player.isSmallBlind) {
+          return { ...player, chips: player.chips - SMALL_BLIND, currentBet: SMALL_BLIND };
+        } else if (player.isBigBlind) {
+          return { ...player, chips: player.chips - BIG_BLIND, currentBet: BIG_BLIND };
+        }
+        return player;
+      });
+
+      setPlayers(playersWithBlinds);
+      setPot(SMALL_BLIND + BIG_BLIND);
+      setCurrentBet(BIG_BLIND);
+
+      verifyChipAccounting(playersWithBlinds, SMALL_BLIND + BIG_BLIND, 'startGame (after blinds posted)');
+
+      setGameLog(prev => [
+        ...prev,
+        { timestamp: new Date(), message: `Round 1 - New hand dealt` },
+        { timestamp: new Date(), message: `${sbPlayer.name} posts small blind $${SMALL_BLIND}` },
+        { timestamp: new Date(), message: `${bbPlayer.name} posts big blind $${BIG_BLIND}` }
+      ]);
+
+      // Step 3: Deal hole cards (BB receives first card, SB receives last)
+      setTimeout(() => {
+        setGamePhase('preflop');
+
+        const humanHand = newDeck.dealCards(2);
+        const aiHand = newDeck.dealCards(2);
+
+        const bbIsHuman = playersWithBlinds.find(p => p.isBigBlind)?.isHuman;
+        const bbHand = bbIsHuman ? humanHand : aiHand;
+        const sbHand = bbIsHuman ? aiHand : humanHand;
+
+        const firstPlayerIndex = getFirstPlayerIndex(playersWithBlinds, 'preflop');
+
+        setHoleCardAnimating(true);
+        // Card 1 -> BB
+        setTimeout(() => {
+          setPlayers(prev => prev.map(player => ({
+            ...player,
+            cards: player.isBigBlind ? [bbHand[0]] : player.cards
+          })));
+
+          // Card 2 -> SB
+          setTimeout(() => {
+            setPlayers(prev => prev.map(player => ({
+              ...player,
+              cards: player.isSmallBlind ? [sbHand[0]] : player.cards
+            })));
+
+            // Card 3 -> BB
+            setTimeout(() => {
+              setPlayers(prev => prev.map(player => ({
+                ...player,
+                cards: player.isBigBlind ? bbHand : player.cards
+              })));
+
+              // Card 4 -> SB (last card dealt)
+              setTimeout(() => {
+                setPlayers(prev => prev.map(player => ({
+                  ...player,
+                  cards: player.isSmallBlind ? sbHand : player.cards
+                })));
+
+                setTimeout(() => {
+                  setHoleCardAnimating(false);
+                  setCurrentPlayerIndex(firstPlayerIndex);
+                  // AI action will be triggered by the useEffect that watches for AI's turn
+                }, 600);
+              }, 300);
+            }, 300);
+          }, 300);
+        }, 200);
+      }, 500);
+    }, 300);
   };
 
   // Reset game to initial state
@@ -175,9 +273,14 @@ function App() {
     setBurnedCards([]);
     setPot(0);
     setCurrentBet(0);
-    setCurrentPlayerIndex(0);
-    setPlayers(getInitialPlayers('Player1', false));
+    setCurrentPlayerIndex(-1);
+    setPlayers(getInitialPlayers(humanPlayerName, humanIsBigBlindFirst));
     setDeck(createDeck());
+    setGameLog([{ timestamp: new Date(), message: `Game started! ${humanPlayerName} vs AI Player` }]);
+    setPlayerLastActions({});
+    setShowdownData(null);
+    setAiCardsFlipping(false);
+    setLastPotWon(0);
   };
 
   // Handle fold win - when someone folds, award pot immediately without revealing cards
@@ -444,9 +547,6 @@ function App() {
     const newDeck = createDeck();
 
     // Deal hole cards to players
-    const humanPlayer = currentPlayers.find(p => p.isHuman)!;
-    const aiPlayer = currentPlayers.find(p => !p.isHuman)!;
-
     const humanHand = newDeck.dealCards(2);
     const aiHand = newDeck.dealCards(2);
 
@@ -505,31 +605,48 @@ function App() {
     setAiCardsFlipping(false); // Reset flip animation state
     setLastPotWon(0); // Reset last pot won
 
-    // Animate hole card dealing
+    // Determine deal order based on blinds: BB gets first card, SB gets last
+    const bbIsHuman = playersWithBlinds.find(p => p.isBigBlind)?.isHuman;
+    const bbHand = bbIsHuman ? humanHand : aiHand;
+    const sbHand = bbIsHuman ? aiHand : humanHand;
+
+    // Animate hole card dealing (BB first, SB last)
     setHoleCardAnimating(true);
     setTimeout(() => {
-      // Deal first card to each player
-      setPlayers(prevPlayers =>
-        prevPlayers.map(player => ({
-          ...player,
-          cards: player.isHuman ? [humanHand[0]] : [aiHand[0]]
-        }))
-      );
+      // Card 1 -> BB
+      setPlayers(prev => prev.map(player => ({
+        ...player,
+        cards: player.isBigBlind ? [bbHand[0]] : player.cards
+      })));
 
       setTimeout(() => {
-        // Deal second card to each player
-        setPlayers(prevPlayers =>
-          prevPlayers.map(player => ({
-            ...player,
-            cards: player.isHuman ? humanHand : aiHand
-          }))
-        );
+        // Card 2 -> SB
+        setPlayers(prev => prev.map(player => ({
+          ...player,
+          cards: player.isSmallBlind ? [sbHand[0]] : player.cards
+        })));
 
         setTimeout(() => {
-          setHoleCardAnimating(false);
-          // AI action will be triggered by the useEffect that watches for AI's turn
-        }, 600); // Animation duration
-      }, 400); // Delay between first and second card
+          // Card 3 -> BB
+          setPlayers(prev => prev.map(player => ({
+            ...player,
+            cards: player.isBigBlind ? bbHand : player.cards
+          })));
+
+          setTimeout(() => {
+            // Card 4 -> SB (last card dealt)
+            setPlayers(prev => prev.map(player => ({
+              ...player,
+              cards: player.isSmallBlind ? sbHand : player.cards
+            })));
+
+            setTimeout(() => {
+              setHoleCardAnimating(false);
+              // AI action will be triggered by the useEffect that watches for AI's turn
+            }, 600); // Animation duration
+          }, 300); // Delay between cards
+        }, 300);
+      }, 300);
     }, 200); // Initial delay
   };
 
@@ -1457,16 +1574,41 @@ function App() {
     }
   };
 
-  // Show initialization screen if game hasn't started
-  if (!gameStarted) {
-    return (
-      <div className="App">
-        <header className="App-header">
-          <h1>Texas Hold'em Poker</h1>
-          <p>A React + TypeScript Poker Game</p>
-        </header>
+  // Restart game - reset to Round 1 with same player name and blind assignment
+  const restartGame = () => {
+    console.log('DEBUG: restartGame called');
+    const initialPlayers = getInitialPlayers(humanPlayerName, humanIsBigBlindFirst);
+    setPlayers(initialPlayers);
+    setRoundNumber(1);
+    setGameOver(false);
+    setOverallWinner(null);
+    setGamePhase('waiting');
+    setWinner(null);
+    setHandComplete(false);
+    setCommunityCards([]);
+    setBurnedCards([]);
+    setPot(0);
+    setCurrentBet(0);
+    setCurrentPlayerIndex(0);
+    setDeck(createDeck());
+    setGameLog([{ timestamp: new Date(), message: `Game restarted! ${humanPlayerName} vs AI Player` }]);
+    
+    // Start new hand after a brief delay
+    setTimeout(() => {
+      dealNewHand(initialPlayers);
+    }, 100);
+  };
 
-        <main className="game-container">
+  // Handler for quitting the game - returns to initial screen
+  const handleQuitGame = () => {
+    resetGame();
+  };
+
+  return (
+    <div className="App">
+      {/* Init form overlay - shown on top of game board when game hasn't started */}
+      {!gameStarted && (
+        <div className="game-init-overlay">
           <div className="game-init-screen">
             <h2>Welcome to Texas Hold'em!</h2>
             <div className="init-form" onKeyPress={handleInitialScreenKeyPress}>
@@ -1479,6 +1621,7 @@ function App() {
                   onChange={(e) => setHumanPlayerName(e.target.value || 'Player1')}
                   placeholder="Enter your name"
                   maxLength={20}
+                  autoFocus
                 />
               </div>
 
@@ -1524,43 +1667,9 @@ function App() {
               </button>
             </div>
           </div>
-        </main>
-      </div>
-    );
-  }
+        </div>
+      )}
 
-  // Restart game - reset to Round 1 with same player name and blind assignment
-  const restartGame = () => {
-    console.log('DEBUG: restartGame called');
-    const initialPlayers = getInitialPlayers(humanPlayerName, humanIsBigBlindFirst);
-    setPlayers(initialPlayers);
-    setRoundNumber(1);
-    setGameOver(false);
-    setOverallWinner(null);
-    setGamePhase('waiting');
-    setWinner(null);
-    setHandComplete(false);
-    setCommunityCards([]);
-    setBurnedCards([]);
-    setPot(0);
-    setCurrentBet(0);
-    setCurrentPlayerIndex(0);
-    setDeck(createDeck());
-    setGameLog([{ timestamp: new Date(), message: `Game restarted! ${humanPlayerName} vs AI Player` }]);
-    
-    // Start new hand after a brief delay
-    setTimeout(() => {
-      dealNewHand(initialPlayers);
-    }, 100);
-  };
-
-  // Handler for quitting the game - returns to initial screen
-  const handleQuitGame = () => {
-    resetGame();
-  };
-
-  return (
-    <div className="App">
       <header className="App-header">
         <h1>Texas Hold'em Poker</h1>
       </header>
@@ -1580,7 +1689,7 @@ function App() {
                 </div>
                 <div className="info-item">
                   <span className="info-label">Phase:</span>
-                  <span className="info-value">{gamePhase.charAt(0).toUpperCase() + gamePhase.slice(1)}</span>
+                  <span className="info-value">{gamePhase === 'waiting' ? 'Preflop' : gamePhase.charAt(0).toUpperCase() + gamePhase.slice(1)}</span>
                 </div>
                 <div className="info-item">
                   <span className="info-label">Current Bet:</span>
@@ -1756,11 +1865,13 @@ function App() {
             {/* Action Buttons - Grid Area: actions */}
             <div className="action-buttons-section">
               <h3>Actions</h3>
-              {/* Betting Controls - Hidden during showdown, visible during betting phases */}
-              {gamePhase !== 'waiting' && gamePhase !== 'showdown' && (() => {
+              {/* Betting Controls - Always rendered to maintain layout, disabled when not player's turn */}
+              {(() => {
                 const humanPlayer = players.find(p => p.isHuman);
-                const isPlayerTurn = players[currentPlayerIndex]?.isHuman;
-                const callValidation = humanPlayer ? validateCallAction(humanPlayer, currentBet, gamePhase) : { valid: false, callAmount: 0 };
+                const isPlayerTurn = players[currentPlayerIndex]?.isHuman && gamePhase !== 'waiting' && gamePhase !== 'showdown';
+                // Use 'preflop' as display phase for validation when in 'waiting' or 'showdown' (buttons will be disabled anyway)
+                const displayPhase = (gamePhase === 'waiting' || gamePhase === 'showdown') ? 'preflop' : gamePhase;
+                const callValidation = humanPlayer ? validateCallAction(humanPlayer, currentBet, displayPhase) : { valid: false, callAmount: 0 };
                 
                 // Debug logging for button state
                 console.log('DEBUG: Button render - gamePhase:', gamePhase, 'currentPlayerIndex:', currentPlayerIndex, 'isPlayerTurn:', isPlayerTurn, 'handComplete:', handComplete);
@@ -1772,7 +1883,7 @@ function App() {
                     <button
                       className="bet-button fold-button"
                       onClick={() => handleBettingAction('fold')}
-                      disabled={!isPlayerTurn || !validateFoldAction(humanPlayer, gamePhase).valid}
+                      disabled={!isPlayerTurn || !validateFoldAction(humanPlayer, displayPhase).valid}
                     >
                       Fold
                     </button>
@@ -1794,7 +1905,7 @@ function App() {
                           className="raise-input"
                           min="5"
                           readOnly
-                          disabled={!isPlayerTurn || (raiseAmount !== '' && !validateRaiseAction(humanPlayer, currentBet, raiseAmount, gamePhase).valid) || humanPlayer.chips === 0}
+                          disabled={!isPlayerTurn || (raiseAmount !== '' && !validateRaiseAction(humanPlayer, currentBet, raiseAmount, displayPhase).valid) || humanPlayer.chips === 0}
                         />
                         <div className="raise-controls">
                           <button
@@ -1835,9 +1946,9 @@ function App() {
                       <button
                         className="bet-button raise-button"
                         onClick={() => handleBettingAction('raise')}
-                        disabled={!isPlayerTurn || !validateRaiseAction(humanPlayer, currentBet, raiseAmount === '' ? '5' : raiseAmount, gamePhase).valid || humanPlayer.chips === 0}
-                        title={!validateRaiseAction(humanPlayer, currentBet, raiseAmount === '' ? '5' : raiseAmount, gamePhase).valid ?
-                          validateRaiseAction(humanPlayer, currentBet, raiseAmount === '' ? '5' : raiseAmount, gamePhase).reason :
+                        disabled={!isPlayerTurn || !validateRaiseAction(humanPlayer, currentBet, raiseAmount === '' ? '5' : raiseAmount, displayPhase).valid || humanPlayer.chips === 0}
+                        title={!validateRaiseAction(humanPlayer, currentBet, raiseAmount === '' ? '5' : raiseAmount, displayPhase).valid ?
+                          validateRaiseAction(humanPlayer, currentBet, raiseAmount === '' ? '5' : raiseAmount, displayPhase).reason :
                           humanPlayer.chips === 0 ? 'No funds remaining' :
                           undefined}
                       >

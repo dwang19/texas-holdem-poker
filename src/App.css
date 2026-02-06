@@ -107,7 +107,7 @@
 .center-section {
   display: grid;
   grid-template-columns: var(--game-info-width) 1fr var(--game-log-width);
-  grid-template-rows: auto auto auto;
+  grid-template-rows: minmax(var(--game-log-height), auto) auto auto;
   grid-template-areas: 
     "game-info top-row game-log"
     "cards-row cards-row cards-row"
@@ -230,6 +230,7 @@
   max-width: var(--game-info-width);
   box-sizing: border-box;
   justify-self: start;
+  align-self: stretch;
 }
 
 /* Game Info Box - In Top Row Container (for backward compatibility) */
@@ -964,16 +965,31 @@
   box-shadow: none;
 }
 
+/* Game Init Overlay - covers the game board with a semi-transparent backdrop */
+.game-init-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.3s ease-out;
+}
+
 /* Game Initialization Screen */
 .game-init-screen {
   background: rgba(255, 255, 255, 0.95);
   color: #2c3e50;
   padding: 40px;
   border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-width: 600px;
-  margin: 0 auto;
+  width: 90%;
   text-align: center;
+  position: relative;
+  z-index: 1001;
 }
 
 .game-init-screen h2 {
