@@ -67,8 +67,7 @@ A web-based Texas Hold'em poker game built with React & TypeScript. Play against
 
 ```
 texas-holdem-poker/
-├── requirements.md          # Development requirements & roadmap
-├── progress.md              # Current development status
+├── PRDs/                    # Product requirements documents (see PRDs/README.md)
 ├── public/                  # Static assets
 ├── src/
 │   ├── components/          # React components
@@ -87,7 +86,14 @@ texas-holdem-poker/
 
 ## Development Roadmap
 
-See [requirements.md](requirements.md) for detailed feature list and [progress.md](progress.md) for current status.
+See the [PRDs folder](PRDs/README.md) for detailed requirements, design decisions, and feature tracking. Key documents:
+
+- **[Core Rules](PRDs/game-design/core-rules.md)** -- Hand rankings, blinds, betting, showdown
+- **[Game Flow](PRDs/game-design/game-flow.md)** -- Phases, dealing, round lifecycle
+- **[AI Opponent](PRDs/game-design/ai-opponent.md)** -- AI decision-making system
+- **[Architecture](PRDs/technical/architecture.md)** -- Tech stack and project structure
+- **[Completed Features](PRDs/roadmap/completed-features.md)** -- What's been built
+- **[Future Enhancements](PRDs/roadmap/future-enhancements.md)** -- What's planned next
 
 ## Deployment
 
@@ -111,10 +117,11 @@ npm run deploy
 
 This project uses a structured development approach:
 
-1. Check `requirements.md` for next tasks
-2. Implement features incrementally
-3. Update `progress.md` after completion
-4. Commit with descriptive messages
+1. Check [PRDs/roadmap/future-enhancements.md](PRDs/roadmap/future-enhancements.md) for next tasks
+2. Update the relevant PRD before implementing
+3. Implement features incrementally
+4. Mark requirements as Done in the PRD after completion
+5. Commit with descriptive messages
 
 ## License
 

@@ -6,6 +6,15 @@ import { Deck, createDeck } from './game/deck';
 import { Card as CardType, Player, GameState, PokerHand } from './game/types';
 import { getAIDecision, AIPersonality } from './game/ai';
 import { evaluateHand, compareHands, getDescriptionWithKicker, getTieBreakingDescriptions } from './game/pokerLogic';
+import {
+  validateFoldAction as _validateFoldAction,
+  validateCallAction as _validateCallAction,
+  validateRaiseAction as _validateRaiseAction,
+  verifyChipAccounting as _verifyChipAccounting,
+  isBettingRoundComplete as _isBettingRoundComplete,
+  getFirstPlayerIndex as _getFirstPlayerIndex,
+  getNextActivePlayerIndex as _getNextActivePlayerIndex,
+} from './game/betting';
 import './App.css';
 
 function App() {
@@ -81,15 +90,14 @@ function App() {
   // Chip accounting verification function - helps catch bugs early
   // Total chips + pot should always equal $200 (starting chips for 2 players)
   const verifyChipAccounting = (playersToCheck: Player[], potToCheck: number, context: string) => {
-    const totalChips = playersToCheck.reduce((sum, p) => sum + p.chips, 0);
-    const total = totalChips + potToCheck;
-    if (total !== 200) {
+    const result = _verifyChipAccounting(playersToCheck, potToCheck, context);
+    if (!result.valid) {
       console.error(`CHIP ACCOUNTING ERROR at ${context}!`);
-      console.error(`Total: $${total}, Expected: $200, Difference: $${total - 200}`);
+      console.error(`Total: $${result.total}, Expected: $${result.expected}, Difference: $${result.total - result.expected}`);
       console.error('Players:', playersToCheck.map(p => ({ name: p.name, chips: p.chips, currentBet: p.currentBet })));
       console.error('Pot:', potToCheck);
     } else {
-      console.log(`DEBUG: Chip accounting verified at ${context} - Total: $${total}`);
+      console.log(`DEBUG: Chip accounting verified at ${context} - Total: $${result.total}`);
     }
   };
 
@@ -1243,147 +1251,29 @@ function App() {
 
   // Function to check if betting round is complete
   const isBettingRoundComplete = (players: Player[], currentBet: number): boolean => {
-    const activePlayers = players.filter(p => !p.hasFolded);
-    if (activePlayers.length <= 1) return true;
-
-    // All active players must have acted in this round AND matched the current bet
-    return activePlayers.every(player =>
-      player.hasActedThisRound && player.currentBet === currentBet
-    );
+    return _isBettingRoundComplete(players, currentBet);
   };
 
   // Get the index of the player who should act first in the current betting round
   const getFirstPlayerIndex = (players: Player[], phase: 'preflop' | 'flop' | 'turn' | 'river'): number => {
-    const activePlayers = players.filter(p => !p.hasFolded);
-    if (activePlayers.length === 0) return -1;
-    
-    console.log('DEBUG: getFirstPlayerIndex - phase:', phase);
-    console.log('DEBUG: getFirstPlayerIndex - players:', players.map(p => ({
-      name: p.name,
-      isSmallBlind: p.isSmallBlind,
-      isBigBlind: p.isBigBlind
-    })));
-    
-    if (phase === 'preflop') {
-      // Pre-flop: Small blind acts first (after blinds are posted)
-      const smallBlindPlayer = activePlayers.find(p => p.isSmallBlind);
-      console.log('DEBUG: getFirstPlayerIndex - smallBlindPlayer:', smallBlindPlayer?.name);
-      if (smallBlindPlayer) {
-        const index = players.findIndex(p => p.id === smallBlindPlayer.id);
-        console.log('DEBUG: getFirstPlayerIndex - returning index:', index);
-        return index;
-      }
-    } else {
-      // Post-flop: Big blind acts first
-      const bigBlindPlayer = activePlayers.find(p => p.isBigBlind);
-      console.log('DEBUG: getFirstPlayerIndex - bigBlindPlayer:', bigBlindPlayer?.name);
-      if (bigBlindPlayer) {
-        const index = players.findIndex(p => p.id === bigBlindPlayer.id);
-        console.log('DEBUG: getFirstPlayerIndex - returning index:', index);
-        return index;
-      }
-    }
-    
-    // Fallback: return first active player
-    const fallbackIndex = players.findIndex(p => !p.hasFolded);
-    console.log('DEBUG: getFirstPlayerIndex - fallback index:', fallbackIndex);
-    return fallbackIndex;
+    return _getFirstPlayerIndex(players, phase);
   };
 
-  // Function to get next active player index
   const getNextActivePlayerIndex = (players: Player[], currentIndex: number): number => {
-    const activePlayers = players.filter(p => !p.hasFolded);
-    if (activePlayers.length <= 1) return -1;
-
-    const currentPlayer = players[currentIndex];
-    const currentActiveIndex = activePlayers.findIndex(p => p.id === currentPlayer.id);
-    const nextActiveIndex = (currentActiveIndex + 1) % activePlayers.length;
-    const nextPlayerId = activePlayers[nextActiveIndex].id;
-    return players.findIndex(p => p.id === nextPlayerId);
+    return _getNextActivePlayerIndex(players, currentIndex);
   };
 
   // Validation functions for betting actions
-  const validateFoldAction = (player: Player, gamePhase: string): { valid: boolean; reason?: string } => {
-    // Fold should always be allowed during betting phases
-    const bettingPhases = ['preflop', 'flop', 'turn', 'river'];
-    if (!bettingPhases.includes(gamePhase)) {
-      return { valid: false, reason: 'Cannot fold outside of betting rounds' };
-    }
-
-    if (player.hasFolded) {
-      return { valid: false, reason: 'Player has already folded' };
-    }
-
-    return { valid: true };
+  const validateFoldAction = (player: Player, gamePhase: string) => {
+    return _validateFoldAction(player, gamePhase);
   };
 
-  const validateCallAction = (player: Player, currentBet: number, gamePhase: string): { valid: boolean; reason?: string; callAmount?: number } => {
-    const bettingPhases = ['preflop', 'flop', 'turn', 'river'];
-    if (!bettingPhases.includes(gamePhase)) {
-      return { valid: false, reason: 'Cannot call outside of betting rounds' };
-    }
-
-    if (player.hasFolded) {
-      return { valid: false, reason: 'Player has already folded' };
-    }
-
-    const callAmount = Math.max(0, currentBet - player.currentBet);
-
-    if (callAmount > player.chips) {
-      return { valid: false, reason: `Insufficient chips. Need $${callAmount} to call, but only have $${player.chips}` };
-    }
-
-    return { valid: true, callAmount };
+  const validateCallAction = (player: Player, currentBet: number, gamePhase: string) => {
+    return _validateCallAction(player, currentBet, gamePhase);
   };
 
-  const validateRaiseAction = (
-    player: Player,
-    currentBet: number,
-    raiseAmountStr: string,
-    gamePhase: string
-  ): { valid: boolean; reason?: string; totalRaiseAmount?: number; minRaise?: number } => {
-    const bettingPhases = ['preflop', 'flop', 'turn', 'river'];
-    if (!bettingPhases.includes(gamePhase)) {
-      return { valid: false, reason: 'Cannot raise outside of betting rounds' };
-    }
-
-    if (player.hasFolded) {
-      return { valid: false, reason: 'Player has already folded' };
-    }
-
-    // Check if player has no funds
-    if (player.chips === 0) {
-      return { valid: false, reason: 'No funds remaining' };
-    }
-
-    // Validate raise amount input
-    const raiseAmount = parseInt(raiseAmountStr);
-    if (isNaN(raiseAmount) || raiseAmount < 5) {
-      return { valid: false, reason: 'Raise amount must be at least $5' };
-    }
-
-    // Calculate minimum raise (must at least match current bet plus raise amount)
-    const callAmount = Math.max(0, currentBet - player.currentBet);
-    const minRaise = callAmount + raiseAmount;
-
-    if (minRaise > player.chips) {
-      return { valid: false, reason: `Insufficient chips. Need at least $${minRaise} to raise, but only have $${player.chips}` };
-    }
-
-    // Check if opponent can afford to call this raise
-    const opponent = players.find(p => !p.hasFolded && p.id !== player.id);
-    if (opponent) {
-      // Opponent needs to call: currentBet - opponent.currentBet + raiseAmount
-      const opponentCallAmount = (currentBet - opponent.currentBet) + raiseAmount;
-      if (opponentCallAmount > opponent.chips) {
-        return {
-          valid: false,
-          reason: `Raise too large. Opponent can only afford to call $${opponent.chips - (currentBet - opponent.currentBet)}. Maximum raise: $${opponent.chips - (currentBet - opponent.currentBet)}`
-        };
-      }
-    }
-
-    return { valid: true, totalRaiseAmount: minRaise, minRaise: raiseAmount };
+  const validateRaiseAction = (player: Player, currentBet: number, raiseAmountStr: string, gamePhase: string) => {
+    return _validateRaiseAction(player, currentBet, raiseAmountStr, gamePhase, players);
   };
 
   const handleBettingAction = (action: 'fold' | 'call' | 'raise') => {
@@ -1618,7 +1508,7 @@ function App() {
                   id="player-name"
                   type="text"
                   value={humanPlayerName}
-                  onChange={(e) => setHumanPlayerName(e.target.value || 'Player1')}
+                  onChange={(e) => setHumanPlayerName(e.target.value)}
                   placeholder="Enter your name"
                   maxLength={20}
                   autoFocus
