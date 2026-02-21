@@ -13,6 +13,7 @@
   --game-info-width: 250px;
   --game-log-width: 425px;
   --game-log-height: 255px;
+  --top-row-height: 300px; /* fixed height for AI player row: covers header + chips (with current-bet) + cards ~296px */
   
   /* Cards Row Components */
   --pot-width: 250px;
@@ -107,7 +108,7 @@
 .center-section {
   display: grid;
   grid-template-columns: var(--game-info-width) 1fr var(--game-log-width);
-  grid-template-rows: minmax(var(--game-log-height), auto) auto auto;
+  grid-template-rows: var(--top-row-height) var(--community-cards-height) auto;
   grid-template-areas: 
     "game-info top-row game-log"
     "cards-row cards-row cards-row"
@@ -118,19 +119,17 @@
   margin: 0 auto;
 }
 
-/* Top Row Container: CSS Grid Layout */
+/* Top Row Container - height governed by --top-row-height fixed grid row */
 .top-row-container {
   grid-area: top-row;
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-areas: "ai-player";
-  align-items: center;
-  justify-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
   width: 100%;
-  min-height: 60px;
+  height: 100%;
 }
 
-/* Cards Row Container: CSS Grid */
+/* Cards Row Container: CSS Grid - fixed height to prevent CLS when flop/turn/river are dealt */
 .cards-row-container {
   grid-area: cards-row;
   display: grid;
@@ -140,15 +139,16 @@
   align-items: stretch;
   justify-items: center;
   width: 100%;
+  height: var(--community-cards-height);
+  min-height: var(--community-cards-height);
+  contain: layout;
 }
 
-/* AI Player Section - Grid Area (Centered Column) */
+/* AI Player Section - Centered Column */
 .top-row-container .ai-player-section {
-  grid-area: ai-player;
   display: flex;
   justify-content: center;
-  align-items: center;
-  justify-self: center;
+  align-items: stretch;
   width: 100%;
 }
 
@@ -525,6 +525,7 @@
   gap: var(--gap-small);
   padding: 0 10px;
   min-width: 0;
+  min-height: 112px; /* match .card--medium height so row never collapses */
   width: 100%;
 }
 
@@ -1305,9 +1306,14 @@
   }
 }
 
+/* Status Slot - fixed-height reservation so the status container's growth/shrinkage never shifts the layout */
+.status-slot {
+  height: 220px;
+  margin-top: var(--gap-large);
+}
+
 /* Status Container (AI Actions and Showdown Results) */
 .status-container {
-  margin: var(--gap-large) 0;
   padding: var(--gap-medium);
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;

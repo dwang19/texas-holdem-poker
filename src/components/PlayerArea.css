@@ -234,6 +234,10 @@
   visibility: hidden;
 }
 
+.current-bet.hidden {
+  visibility: hidden;
+}
+
 .action-label {
   color: #2ecc71;
   font-weight: bold;

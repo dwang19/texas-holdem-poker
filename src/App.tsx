@@ -1854,6 +1854,8 @@ function App() {
         </div>
 
 
+        {/* Status Slot - fixed-height reservation prevents CLS when content grows/shrinks */}
+        <div className="status-slot">
         {/* Status Container - Shows AI actions during play, showdown/fold results when hand is complete */}
         <div className={`status-container ${gameOver ? 'game-over-active' : ''} ${aiActionDisplay || gamePhase === 'showdown' || (handComplete && winner) || gameOver ? 'visible' : 'hidden'}`}>
           {gameOver && overallWinner ? (
@@ -2011,6 +2013,7 @@ function App() {
             </div>
           ) : null}
         </div>
+        </div>{/* end status-slot */}
 
 
       </main>
