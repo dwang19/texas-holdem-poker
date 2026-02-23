@@ -1790,7 +1790,7 @@ function App() {
               {/* Betting Controls - Always rendered to maintain layout, disabled when not player's turn */}
               {(() => {
                 const humanPlayer = players.find(p => p.isHuman);
-                const isPlayerTurn = players[currentPlayerIndex]?.isHuman && gamePhase !== 'waiting' && gamePhase !== 'showdown';
+                const isPlayerTurn = players[currentPlayerIndex]?.isHuman && gamePhase !== 'waiting' && gamePhase !== 'showdown' && !isDealing && !holeCardAnimating;
                 // Use 'preflop' as display phase for validation when in 'waiting' or 'showdown' (buttons will be disabled anyway)
                 const displayPhase = (gamePhase === 'waiting' || gamePhase === 'showdown') ? 'preflop' : gamePhase;
                 const callValidation = humanPlayer ? validateCallAction(humanPlayer, currentBet, displayPhase) : { valid: false, callAmount: 0 };
