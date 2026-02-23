@@ -269,7 +269,8 @@
   animation: cardGlow 2s ease-in-out infinite alternate;
   transform: scale(1.05);
   z-index: 10;
-  filter: brightness(1.1);
+  filter: brightness(1.15);
+  transition: none;
 }
 
 .card--highlighted.card--highlight-green {
@@ -294,7 +295,22 @@
   }
   100% {
     transform: scale(1.08);
-    filter: brightness(1.2);
+  }
+}
+
+/* When a card is both raised and highlighted, use a raise-aware animation so
+   translateY(-20px) isn't clobbered by the base cardGlow keyframes */
+.card--raised.card--highlighted {
+  animation: cardGlowRaised 2s ease-in-out infinite alternate;
+  transition: none;
+}
+
+@keyframes cardGlowRaised {
+  0% {
+    transform: translateY(-20px) scale(1.05);
+  }
+  100% {
+    transform: translateY(-20px) scale(1.08);
   }
 }
 
@@ -408,7 +424,7 @@
 /* Raised Card Animation - For community cards on hover */
 .card--raised {
   transform: translateY(-20px) scale(1.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease;
   z-index: 20;
 }
 

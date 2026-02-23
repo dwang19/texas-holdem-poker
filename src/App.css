@@ -87,6 +87,14 @@
   isolation: isolate;
 }
 
+/* .cards-row-container uses contain:layout which creates a stacking context
+   at level 0, trapping .community-cards' z-index inside it. Lift the whole
+   row above the overlay so community cards aren't dimmed. */
+.game-container.showdown-active .cards-row-container {
+  position: relative;
+  z-index: 100;
+}
+
 /* Make card backgrounds appear above overlay during showdown */
 .game-container.showdown-active .player-area .card,
 .game-container.showdown-active .community-cards .card {
