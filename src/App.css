@@ -32,9 +32,16 @@
 
 .App {
   text-align: center;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
   background: linear-gradient(135deg, #0f4c75 0%, #3282b8 50%, #bbe1fa 100%);
   color: white;
+}
+
+.viewport-scaler {
+  display: flow-root;
+  width: 100%;
 }
 
 .App-header {
@@ -1308,7 +1315,7 @@
 
 /* Status Slot - fixed-height reservation so the status container's growth/shrinkage never shifts the layout */
 .status-slot {
-  height: 220px;
+  height: 100px;
   margin-top: var(--gap-large);
 }
 

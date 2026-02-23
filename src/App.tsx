@@ -1,5 +1,5 @@
 // Test change for GitHub push capability - added by AI assistant
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import Card from './components/Card';
 import PlayerArea from './components/PlayerArea';
 import { Deck, createDeck } from './game/deck';
@@ -85,6 +85,7 @@ function App() {
   const [aiCardsFlipping, setAiCardsFlipping] = useState<boolean>(false);
   const [lastPotWon, setLastPotWon] = useState<number>(0);
   const logEntriesRef = useRef<HTMLDivElement>(null);
+  const scalerRef = useRef<HTMLDivElement>(null);
   const [hoveredPlayerHand, setHoveredPlayerHand] = useState<'human' | 'ai' | null>(null);
 
   // Chip accounting verification function - helps catch bugs early
@@ -107,6 +108,36 @@ function App() {
       logEntriesRef.current.scrollTop = logEntriesRef.current.scrollHeight;
     }
   }, [gameLog]);
+
+  const lastOuterRef = useRef({ w: window.outerWidth, h: window.outerHeight });
+
+  const applyScale = useCallback(() => {
+    const el = scalerRef.current;
+    if (!el) return;
+    el.style.setProperty('zoom', '1');
+    const naturalHeight = el.scrollHeight;
+    const viewportHeight = window.innerHeight;
+    const scale = Math.min(1, viewportHeight / naturalHeight);
+    el.style.setProperty('zoom', String(scale));
+    lastOuterRef.current = { w: window.outerWidth, h: window.outerHeight };
+  }, []);
+
+  useLayoutEffect(() => {
+    applyScale();
+  }, [applyScale, gameStarted]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isGenuineResize =
+        window.outerHeight !== lastOuterRef.current.h ||
+        window.outerWidth !== lastOuterRef.current.w;
+      if (isGenuineResize) {
+        applyScale();
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [applyScale]);
 
   // Auto-trigger AI action when it becomes AI's turn
   useEffect(() => {
@@ -1560,6 +1591,7 @@ function App() {
         </div>
       )}
 
+      <div className="viewport-scaler" ref={scalerRef}>
       <header className="App-header">
         <h1>Texas Hold'em Poker</h1>
       </header>
@@ -2017,6 +2049,7 @@ function App() {
 
 
       </main>
+      </div>{/* end viewport-scaler */}
 
     </div>
   );
