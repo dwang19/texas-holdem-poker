@@ -1921,6 +1921,47 @@ function App() {
                   })()}
                 </span>
               </div>
+              {showdownData && showdownData.hands.length > 1 && (
+                <div className="showdown-comparison">
+                  {(() => {
+                    if (showdownData.isTie) {
+                      const hand1 = showdownData.hands[0];
+                      const hand2 = showdownData.hands[1];
+                      return (
+                        <span className="comparison-text">
+                          <span className={hand1.player.isHuman ? 'human-text' : 'ai-text'}>
+                            {getDescriptionWithKicker(hand1.pokerHand)}
+                          </span>
+                          {' ties '}
+                          <span className={hand2.player.isHuman ? 'human-text' : 'ai-text'}>
+                            {getDescriptionWithKicker(hand2.pokerHand)}
+                          </span>
+                        </span>
+                      );
+                    }
+                    const winnerHand = showdownData.hands.find(h => h.isWinner);
+                    const loserHand = showdownData.hands.find(h => !h.isWinner);
+                    if (winnerHand && loserHand) {
+                      const sameType = winnerHand.pokerHand.type === loserHand.pokerHand.type;
+                      const [winnerDesc, loserDesc] = sameType
+                        ? getTieBreakingDescriptions(winnerHand.pokerHand, loserHand.pokerHand)
+                        : [winnerHand.pokerHand.description, loserHand.pokerHand.description];
+                      return (
+                        <span className="comparison-text">
+                          <span className={winnerHand.player.isHuman ? 'human-text' : 'ai-text'}>
+                            {winnerDesc}
+                          </span>
+                          {' beats '}
+                          <span className={loserHand.player.isHuman ? 'human-text' : 'ai-text'}>
+                            {loserDesc}
+                          </span>
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
               <div className="game-over-buttons">
                 <button
                   onClick={restartGame}

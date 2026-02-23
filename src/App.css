@@ -1419,13 +1419,14 @@
 
 .showdown-comparison {
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.45);
   border-radius: 20px;
 }
 
 .showdown-comparison .comparison-text {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
 }
 
 .showdown-comparison .human-text {
