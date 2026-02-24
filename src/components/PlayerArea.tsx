@@ -8,7 +8,6 @@ interface PlayerAreaProps {
   isCurrentPlayer?: boolean;
   gamePhase?: 'waiting' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown';
   holeCardAnimating?: boolean;
-  lastAction?: string;
   aiCardsFlipping?: boolean;
   isShowdown?: boolean;
   onHandHover?: () => void;
@@ -22,7 +21,6 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
   isCurrentPlayer = false,
   gamePhase = 'waiting',
   holeCardAnimating = false,
-  lastAction = '',
   aiCardsFlipping = false,
   isShowdown = false,
   onHandHover,
@@ -69,14 +67,6 @@ const PlayerArea: React.FC<PlayerAreaProps> = ({
         <div className="chip-stack">
           <div className="chip-icon">💰</div>
           <span className="chip-amount">${player.chips.toLocaleString()}</span>
-        </div>
-        <div className={`current-bet ${player.currentBet === 0 ? 'hidden' : ''}`}>
-          <span className="bet-label">Bet:</span>
-          <span className="bet-amount">${player.currentBet}</span>
-        </div>
-        <div className={`last-action ${lastAction ? '' : 'hidden'}`}>
-          <span className="action-label">Last:</span>
-          <span className="action-value">{lastAction || '\u00A0'}</span>
         </div>
       </div>
 

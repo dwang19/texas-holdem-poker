@@ -167,6 +167,14 @@
   width: 100%;
 }
 
+/* Wrapper that stacks a PlayerArea and its BetChip vertically */
+.player-with-bet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Human Player Section - Grid Area (Same column as AI Player) */
 .center-section .human-player-section {
   grid-area: human-player;

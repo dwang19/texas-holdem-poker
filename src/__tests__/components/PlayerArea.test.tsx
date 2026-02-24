@@ -59,9 +59,9 @@ describe('PlayerArea component (LC-040–LC-048)', () => {
     expect(screen.getByText(/FOLDED/)).toBeInTheDocument();
   });
 
-  test('renders last action when provided', () => {
-    render(<PlayerArea player={createPlayer()} lastAction="Call $10" />);
-    expect(screen.getByText('Call $10')).toBeInTheDocument();
+  test('renders player chips', () => {
+    render(<PlayerArea player={createPlayer({ chips: 500 })} />);
+    expect(screen.getByText('$500')).toBeInTheDocument();
   });
 
   test('renders 2 hole cards when provided (LC-046)', () => {

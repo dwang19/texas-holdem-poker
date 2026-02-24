@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import Card from './components/Card';
 import PlayerArea from './components/PlayerArea';
+import BetChip from './components/BetChip';
 import { Deck, createDeck } from './game/deck';
 import { Card as CardType, Player, GameState, PokerHand } from './game/types';
 import { getAIDecision, AIPersonality } from './game/ai';
@@ -1628,20 +1629,21 @@ function App() {
                   const aiHandData = showdownData?.hands.find(h => !h.player.isHuman);
                   const aiUsedHoleCardIndices = getUsedHoleCardIndices(aiHandData?.pokerHand, player.cards);
                   return (
-                    <PlayerArea
-                      key={player.id}
-                      player={player}
-                      isCurrentPlayer={playerIndex === currentPlayerIndex}
-                      gamePhase={gamePhase}
-                      holeCardAnimating={holeCardAnimating}
-                      lastAction={playerLastActions[player.id]}
-                      aiCardsFlipping={aiCardsFlipping}
-                      isShowdown={gamePhase === 'showdown'}
-                      onHandHover={() => setHoveredPlayerHand('ai')}
-                      onHandLeave={() => setHoveredPlayerHand(null)}
-                      usedHoleCardIndices={aiUsedHoleCardIndices}
-                      isHovered={hoveredPlayerHand === 'ai'}
-                    />
+                    <div key={player.id} className="player-with-bet">
+                      <PlayerArea
+                        player={player}
+                        isCurrentPlayer={playerIndex === currentPlayerIndex}
+                        gamePhase={gamePhase}
+                        holeCardAnimating={holeCardAnimating}
+                        aiCardsFlipping={aiCardsFlipping}
+                        isShowdown={gamePhase === 'showdown'}
+                        onHandHover={() => setHoveredPlayerHand('ai')}
+                        onHandLeave={() => setHoveredPlayerHand(null)}
+                        usedHoleCardIndices={aiUsedHoleCardIndices}
+                        isHovered={hoveredPlayerHand === 'ai'}
+                      />
+                      <BetChip amount={player.currentBet} />
+                    </div>
                   );
                 })}
               </div>
@@ -1767,19 +1769,20 @@ function App() {
                 const humanHandData = showdownData?.hands.find(h => h.player.isHuman);
                 const humanUsedHoleCardIndices = getUsedHoleCardIndices(humanHandData?.pokerHand, player.cards);
                 return (
-                  <PlayerArea
-                    key={player.id}
-                    player={player}
-                    isCurrentPlayer={playerIndex === currentPlayerIndex}
-                    gamePhase={gamePhase}
-                    holeCardAnimating={holeCardAnimating}
-                    lastAction={playerLastActions[player.id]}
-                    isShowdown={gamePhase === 'showdown'}
-                    onHandHover={() => setHoveredPlayerHand('human')}
-                    onHandLeave={() => setHoveredPlayerHand(null)}
-                    usedHoleCardIndices={humanUsedHoleCardIndices}
-                    isHovered={hoveredPlayerHand === 'human'}
-                  />
+                  <div key={player.id} className="player-with-bet">
+                    <BetChip amount={player.currentBet} />
+                    <PlayerArea
+                      player={player}
+                      isCurrentPlayer={playerIndex === currentPlayerIndex}
+                      gamePhase={gamePhase}
+                      holeCardAnimating={holeCardAnimating}
+                      isShowdown={gamePhase === 'showdown'}
+                      onHandHover={() => setHoveredPlayerHand('human')}
+                      onHandLeave={() => setHoveredPlayerHand(null)}
+                      usedHoleCardIndices={humanUsedHoleCardIndices}
+                      isHovered={hoveredPlayerHand === 'human'}
+                    />
+                  </div>
                 );
               })}
             </div>
