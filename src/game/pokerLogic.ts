@@ -399,6 +399,9 @@ export const getTieBreakingDescriptions = (
         `${getRankName(loserCards[0].rank)} High (${loserKicker} kicker)`
       ];
     case 'pair': {
+      if (winnerCards[0].rank !== loserCards[0].rank) {
+        return [winnerHand.description, loserHand.description];
+      }
       const pairRank = getRankName(winnerCards[0].rank);
       return [
         `Pair of ${pairRank}s (${winnerKicker} kicker)`,
@@ -413,6 +416,9 @@ export const getTieBreakingDescriptions = (
       ];
     }
     case 'three-of-a-kind': {
+      if (winnerCards[0].rank !== loserCards[0].rank) {
+        return [winnerHand.description, loserHand.description];
+      }
       const tripsRank = getRankName(winnerCards[0].rank);
       return [
         `Three ${tripsRank}s (${winnerKicker} kicker)`,

@@ -1,5 +1,5 @@
-import { evaluateHand, compareHands } from './pokerLogic';
-import { Card } from './types';
+import { evaluateHand, compareHands, getTieBreakingDescriptions } from './pokerLogic';
+import { Card, PokerHand } from './types';
 
 // Helper function to create test cards
 const createCard = (rank: number, suit: Card['suit']): Card => ({
@@ -272,5 +272,61 @@ describe('Poker Hand Evaluation (CR hand rankings, CR-041)', () => {
     expect(hand1.type).toBe('two-pair');
     expect(hand2.type).toBe('two-pair');
     expect(compareHands(hand1, hand2)).toBe(1);
+  });
+});
+
+describe('getTieBreakingDescriptions', () => {
+  const mkHand = (type: PokerHand['type'], cards: Card[], description: string, rank = 0): PokerHand => ({
+    type, cards, description, rank,
+  });
+
+  test('different pair ranks use plain descriptions, not kicker text', () => {
+    const winner = mkHand('pair',
+      [createCard(6, 'spades'), createCard(6, 'clubs'), createCard(14, 'hearts'), createCard(13, 'spades'), createCard(12, 'hearts')],
+      'Pair of 6s');
+    const loser = mkHand('pair',
+      [createCard(5, 'spades'), createCard(5, 'hearts'), createCard(14, 'clubs'), createCard(13, 'diamonds'), createCard(12, 'spades')],
+      'Pair of 5s');
+    const [winDesc, loseDesc] = getTieBreakingDescriptions(winner, loser);
+    expect(winDesc).toBe('Pair of 6s');
+    expect(loseDesc).toBe('Pair of 5s');
+  });
+
+  test('same pair rank shows kicker info', () => {
+    const winner = mkHand('pair',
+      [createCard(6, 'spades'), createCard(6, 'clubs'), createCard(14, 'hearts'), createCard(13, 'spades'), createCard(12, 'hearts')],
+      'Pair of 6s');
+    const loser = mkHand('pair',
+      [createCard(6, 'hearts'), createCard(6, 'diamonds'), createCard(14, 'clubs'), createCard(13, 'diamonds'), createCard(11, 'spades')],
+      'Pair of 6s');
+    const [winDesc, loseDesc] = getTieBreakingDescriptions(winner, loser);
+    expect(winDesc).toContain('Pair of 6s');
+    expect(winDesc).toContain('kicker');
+    expect(loseDesc).toContain('Pair of 6s');
+    expect(loseDesc).toContain('kicker');
+  });
+
+  test('different three-of-a-kind ranks use plain descriptions', () => {
+    const winner = mkHand('three-of-a-kind',
+      [createCard(9, 'spades'), createCard(9, 'clubs'), createCard(9, 'hearts'), createCard(14, 'diamonds'), createCard(13, 'spades')],
+      'Three 9s');
+    const loser = mkHand('three-of-a-kind',
+      [createCard(7, 'spades'), createCard(7, 'clubs'), createCard(7, 'hearts'), createCard(14, 'clubs'), createCard(13, 'diamonds')],
+      'Three 7s');
+    const [winDesc, loseDesc] = getTieBreakingDescriptions(winner, loser);
+    expect(winDesc).toBe('Three 9s');
+    expect(loseDesc).toBe('Three 7s');
+  });
+
+  test('different hand types return plain descriptions', () => {
+    const winner = mkHand('flush',
+      [createCard(14, 'hearts'), createCard(10, 'hearts'), createCard(8, 'hearts'), createCard(6, 'hearts'), createCard(3, 'hearts')],
+      'Flush (Ace high)');
+    const loser = mkHand('pair',
+      [createCard(10, 'spades'), createCard(10, 'clubs'), createCard(14, 'diamonds'), createCard(9, 'hearts'), createCard(7, 'clubs')],
+      'Pair of 10s');
+    const [winDesc, loseDesc] = getTieBreakingDescriptions(winner, loser);
+    expect(winDesc).toBe('Flush (Ace high)');
+    expect(loseDesc).toBe('Pair of 10s');
   });
 });
